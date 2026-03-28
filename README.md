@@ -137,9 +137,28 @@ Score: 95.4/100 (Риск: Низкий)
 ● Сезонность подачи: средний (93%) — +14.0 баллов
 ```
 
-На этапе 2 добавляются SHAP waterfall-графики — визуализация вклада каждого фактора в конкретный score.
+На этапе 2 добавятся SHAP waterfall-графики — визуализация вклада каждого фактора в конкретный score.
 
 ---
+
+
+## Структура текущего проекта
+
+```
+subsidy-scoring/
+├── src/
+│   ├── __init__.py
+│   ├── pipeline.py                   # Загрузка xlsx, очистка, типизация
+│   ├── features.py                   # Feature engineering (9 признаков)
+│   ├── scoring.py                    # Scoring engine + explainability
+├── data/
+│   └── subsidies.xlsx                # Исходные данные
+├── output/
+│   └── scored_applications.csv       # Результаты скоринга
+├── main.py                           # Entry point
+├── requirements.txt
+└── README.md
+```
 
 ## Структура будущего проекта
 
