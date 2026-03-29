@@ -1,0 +1,165 @@
+/* общие стили страницы */
+.block-container {
+    padding-top: 1.5rem;
+    padding-bottom: 1rem;
+}
+
+/* скрываем стандартный header/footer streamlit */
+#MainMenu {
+    visibility: hidden;
+}
+
+footer {
+    visibility: hidden;
+}
+
+header {
+    visibility: hidden;
+}
+
+
+/* ── sidebar ── */
+[data-testid="stSidebar"] {
+    padding-top: 0.1rem;
+}
+
+[data-testid="stSidebar"] h2 {
+    margin-top: 0;
+    padding-top: 0;
+}
+
+
+/* ── заголовок и подзаголовок ── */
+.main-title {
+    font-size: 2.2rem;
+    font-weight: 800;
+    margin-bottom: 0.2rem;
+}
+
+.subtitle {
+    font-size: 1.15rem;
+    color: #a0a0b0;
+    margin-bottom: 1.5rem;
+}
+
+
+/* ── карточки метрик ── */
+[data-testid="stMetric"] {
+    background: #1a1a2e;
+    border: 1px solid #3a3a5a;
+    border-radius: 12px;
+    padding: 15px 20px;
+}
+
+[data-testid="stMetric"] label {
+    font-size: 0.85rem;
+    color: #8888aa;
+}
+
+[data-testid="stMetric"] [data-testid="stMetricValue"] {
+    font-size: 1.6rem;
+    font-weight: 700;
+}
+
+
+/* ── секции ── */
+.section-header {
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin-top: 2rem;
+    margin-bottom: 0.8rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 2px solid #30305a;
+}
+
+
+/* ── таблица ── */
+[data-testid="stDataFrame"] {
+    border-radius: 8px;
+}
+
+
+/* ── детали заявки ── */
+.detail-card {
+    background: #1a1a2e;
+    border: 1px solid #3a3a5a;
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-top: 0.8rem;
+}
+
+.detail-score {
+    font-size: 2.8rem;
+    font-weight: 800;
+    margin: 0;
+}
+
+.detail-score-label {
+    font-size: 0.85rem;
+    color: #8888aa;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 0.3rem;
+}
+
+.risk-badge {
+    display: inline-block;
+    padding: 6px 18px;
+    border-radius: 20px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-top: 0.5rem;
+}
+
+.risk-low {
+    background: rgba(45, 106, 79, 0.25);
+    color: #2d6a4f;
+    border: 1px solid #2d6a4f;
+}
+
+.risk-medium {
+    background: rgba(233, 196, 106, 0.2);
+    color: #e9c46a;
+    border: 1px solid #e9c46a;
+}
+
+.risk-high {
+    background: rgba(230, 57, 70, 0.2);
+    color: #e63946;
+    border: 1px solid #e63946;
+}
+
+.explanation-item {
+    background: #12121e;
+    border-left: 4px solid #3a3a5a;
+    border-radius: 0 8px 8px 0;
+    padding: 10px 16px;
+    margin-bottom: 8px;
+    font-size: 1rem;
+    line-height: 1.5;
+}
+
+.explanation-item.high {
+    border-left-color: #2d6a4f;
+}
+
+.explanation-item.medium {
+    border-left-color: #e9c46a;
+}
+
+.explanation-item.low {
+    border-left-color: #e63946;
+}
+
+.app-info-row {
+    display: flex;
+    gap: 2rem;
+    margin-top: 1rem;
+    color: #8888aa;
+    font-size: 0.9rem;
+}
+
+.app-info-row span {
+    color: #d0d0e0;
+    font-weight: 600;
+}
