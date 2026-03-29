@@ -154,7 +154,7 @@ subsidy-scoring/
 ├── data/
 │   └── subsidies.xlsx                # Исходные данные
 ├── output/
-│   └── scored_applications.csv       # Результаты скоринга
+│   └── shortlist.csv                 # Результаты скоринга
 ├── main.py                           # Entry point
 ├── requirements.txt
 └── README.md

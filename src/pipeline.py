@@ -1,11 +1,11 @@
-"""загрузка, очистка, подготовка данных."""
+# загрузка, очистка, подготовка данных
 import pandas as pd
 from pathlib import Path
 from datetime import datetime
 
 
 def load_raw_data(path: str) -> pd.DataFrame:
-    """загрузка xlsx."""
+    # загрузка xlsx
     import openpyxl
 
     wb = openpyxl.load_workbook(path, read_only=True)
@@ -29,7 +29,7 @@ def load_raw_data(path: str) -> pd.DataFrame:
 
 
 def clean_data(df: pd.DataFrame) -> pd.DataFrame:
-    """очищаем датафрейм от пустот, парсим даты, типизируем"""
+    # очищаем датафрейм от пустот, парсим даты, типизируем
     df = df.dropna(subset=["app_number", "status", "region"])
 
     # парсинг даты
@@ -55,7 +55,7 @@ def clean_data(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def run_pipeline(path: str) -> pd.DataFrame:
-    """запускаем пайплайн"""
+    #запускаем пайплайн
     raw = load_raw_data(path)
     clean = clean_data(raw)
     print(f"Pipeline complete: {len(clean)} records, "

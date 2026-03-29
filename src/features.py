@@ -1,10 +1,10 @@
-"""вычисление признаков для скоринга."""
+# вычисление признаков для скоринга
 import pandas as pd
 import numpy as np
 
 
 def compute_approval_rates(df: pd.DataFrame) -> dict:
-    """вычисление процентов одобрений по регионам, направлениям, типам субсидий."""
+    # вычисление процентов одобрений по регионам, направлениям, типам субсидий
     rates = {}
 
     for col in ["region", "direction", "subsidy_type", "district"]:
@@ -16,7 +16,7 @@ def compute_approval_rates(df: pd.DataFrame) -> dict:
 
 
 def compute_amount_stats(df: pd.DataFrame) -> dict:
-    """оценки адекватности - медиана и стандартное отклонение суммы по типу субсидии."""
+    # оценки адекватности - медиана и стандартное отклонение суммы по типу субсидии
     stats = {}
     for stype, group in df.groupby("subsidy_type"):
         amounts = group["amount"]
@@ -31,13 +31,13 @@ def compute_amount_stats(df: pd.DataFrame) -> dict:
 
 
 def compute_seasonality_scores(df: pd.DataFrame) -> dict:
-    """ранние заявки одобряются чаще."""
+    # ранние заявки одобряются чаще
     monthly = df.groupby("submit_month")["is_approved"].mean()
     return monthly.to_dict()
 
 
 def build_feature_tables(df: pd.DataFrame) -> dict:
-    """сборка всех справочных таблиц для скоринга."""
+    # сборка всех справочных таблиц для скоринга
     return {
         "approval_rates": compute_approval_rates(df),
         "amount_stats": compute_amount_stats(df),
@@ -46,7 +46,7 @@ def build_feature_tables(df: pd.DataFrame) -> dict:
 
 
 def extract_features(row: pd.Series, tables: dict) -> dict:
-    """извлечение числовых признаков из одной заявки."""
+    # извлечение числовых признаков из одной заявки
     ar = tables["approval_rates"]
     amt = tables["amount_stats"]
     seas = tables["seasonality"]
@@ -84,7 +84,7 @@ def extract_features(row: pd.Series, tables: dict) -> dict:
 
 
 def extract_features_batch(df: pd.DataFrame, tables: dict) -> pd.DataFrame:
-    """Векторизованное извлечение признаков для всего датафрейма."""
+    #векторизованное извлечение признаков для всего датафрейма 
     ar = tables["approval_rates"]
     amt = tables["amount_stats"]
     seas = tables["seasonality"]

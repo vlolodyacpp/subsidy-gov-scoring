@@ -1,5 +1,5 @@
-"""экспертные веса на основе Правил субсидирования.
-"""
+# экспертные веса на основе правил субсидирования 
+
 import pandas as pd
 import numpy as np
 from dataclasses import dataclass
@@ -32,7 +32,7 @@ class ScoringResult:
 
 
 def score_single(features: dict) -> ScoringResult:
-    """скоринг одной заявки с объяснением."""
+    # скоринг одной заявки с объяснением 
     factors = {}
     raw_score = 0.0
 
@@ -70,7 +70,7 @@ def score_single(features: dict) -> ScoringResult:
 
 
 def score_batch(features_df: pd.DataFrame) -> pd.DataFrame:
-    """векторизированный скоринг каждой заявки."""
+    # векторизированный скоринг каждой заявки.
     scores = pd.Series(0.0, index=features_df.index)
     factor_contributions = {}
 
@@ -102,7 +102,7 @@ def generate_shortlist(
     top_n: int = 50,
     output_dir: str = "output",
 ) -> pd.DataFrame:
-    """Формирование shortlist — топ-N заявок для комиссии. Сохраняет CSV."""
+    # формирование shortlist — топ-N заявок для комиссии. Сохраняет CSV 
     from pathlib import Path
 
     combined = pd.concat([df, scores], axis=1)
@@ -124,7 +124,7 @@ def generate_shortlist(
 
 
 def get_score_distribution(scores: pd.DataFrame) -> dict:
-    """Статистика распределения скоров."""
+    # cтатистика распределения скоров. 
     s = scores["score"]
     return {
         "mean": round(s.mean(), 1),
