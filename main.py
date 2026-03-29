@@ -1,17 +1,21 @@
-"""запуск полного пайплайна скоринга.(временное решение на первичном этапе)"""
+# entry point: python main.py (CLI) или python main.py --serve (FastAPI)
 import sys
+import argparse
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from src.pipeline import run_pipeline
-from src.features import build_feature_tables, extract_features_batch
-from src.scoring import score_batch, generate_shortlist, get_score_distribution, score_single
+DATA_PATH = "data/subsidies.xlsx"
 
 
-def main(data_path: str):
+def run_cli(data_path: str):
+    #запуск CLI-пайплайна скоринга
+    from src.pipeline import run_pipeline
+    from src.features import build_feature_tables, extract_features_batch
+    from src.scoring import score_batch, generate_shortlist, get_score_distribution, score_single
+
     print("=" * 60)
-    print("SUBSIDY SCORING SYSTEM v0.1 (Rule-based)")
+    print("SUBSIDY SCORING SYSTEM v0.2 (Rule-based)")
     print("=" * 60)
 
     # 1. загрузка и очистка
@@ -52,6 +56,41 @@ def main(data_path: str):
     return df, features, scores
 
 
+def run_server(host: str = "0.0.0.0", port: int = 8000):
+    #запуск FastAPI-сервера
+    import uvicorn
+
+    print("=" * 60)
+    print("SUBSIDY SCORING API v0.2")
+    print(f"Запуск на http://{host}:{port}")
+    print(f"Swagger UI: http://{host}:{port}/docs")
+    print("=" * 60)
+
+    uvicorn.run("src.api:app", host=host, port=port, reload=False)
+
+
 if __name__ == "__main__":
-    DATA_PATH = "data/subsidies.xlsx"
-    main(DATA_PATH)
+    parser = argparse.ArgumentParser(description="Subsidy Scoring System")
+    parser.add_argument(
+        "--serve",
+        action="store_true",
+        help="Запустить FastAPI-сервер вместо CLI-пайплайна",
+    )
+    parser.add_argument(
+        "--host",
+        default="0.0.0.0",
+        help="Хост для сервера (по умолчанию: 0.0.0.0)",
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=8000,
+        help="Порт для сервера (по умолчанию: 8000)",
+    )
+
+    args = parser.parse_args()
+
+    if args.serve:
+        run_server(host=args.host, port=args.port)
+    else:
+        run_cli(DATA_PATH)
