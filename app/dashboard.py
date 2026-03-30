@@ -64,7 +64,6 @@ def render_sidebar(df: pd.DataFrame) -> pd.DataFrame:
         (filtered["score"] >= score_min) & (filtered["score"] <= score_max)
     ]
 
-    st.sidebar.divider()
     st.sidebar.metric("Записей после фильтра", f"{len(filtered):,}")
 
     return filtered
