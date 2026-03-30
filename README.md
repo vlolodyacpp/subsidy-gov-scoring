@@ -142,25 +142,7 @@ Score: 95.4/100 (Риск: Низкий)
 ---
 
 
-## Структура текущего проекта
-
-```
-subsidy-scoring/
-├── src/
-│   ├── __init__.py
-│   ├── pipeline.py                   # Загрузка xlsx, очистка, типизация
-│   ├── features.py                   # Feature engineering (9 признаков)
-│   ├── scoring.py                    # Scoring engine + explainability
-├── data/
-│   └── subsidies.xlsx                # Исходные данные
-├── output/
-│   └── shortlist.csv                 # Результаты скоринга
-├── main.py                           # Entry point
-├── requirements.txt
-└── README.md
-```
-
-## Структура будущего проекта
+## Текущая структура проекта
 
 ```
 subsidy-scoring/
@@ -169,14 +151,20 @@ subsidy-scoring/
 │   ├── pipeline.py          # Загрузка xlsx, очистка, типизация
 │   ├── features.py          # Feature engineering (9 признаков)
 │   ├── scoring.py           # Scoring engine + explainability
-│   ├── model.py             # CatBoost обучение (этап 2)
-│   ├── explainer.py         # SHAP-объяснения (этап 2)
-│   └── api.py               # FastAPI endpoints (этап 2)
+│   ├── schemas.py           # Pydantic-схемы запросов и ответов
+│   └── api.py               # FastAPI endpoints
 ├── app/
-│   └── dashboard.py         # Streamlit UI (этап 2)
+│   ├── dashboard.py         # Streamlit UI
+│   ├── api_client.py        # HTTP-клиент dashboard → API
+│   └── style.css            # Стили дашборда
 ├── data/
-│   └── scored_applications.csv
-├── main.py                  # Entry point
+│   └── subsidies.xlsx       # Исходные данные
+├── output/
+│   └── shortlist.csv        # Результаты скоринга
+├── main.py                  # Entry point (CLI + сервер)
+├── docker-compose.yml       # API + Dashboard
+├── Dockerfile.api           # Образ FastAPI
+├── Dockerfile.dashboard     # Образ Streamlit
 ├── requirements.txt
 └── README.md
 ```
@@ -185,12 +173,29 @@ subsidy-scoring/
 
 ## Быстрый старт
 
-### Требования
+### Вариант 1: Docker Compose
 
-- Python 3.10+
-- pip
+```bash
+# 1. Клонировать репозиторий
+git clone https://github.com/vlolodyacpp/subsidy-gov-scoring
+cd subsidy-gov-scoring
 
-### Установка и запуск
+# 2. Поместить данные в data/subsidies.xlsx
+
+# 3. Запустить
+docker compose up --build
+```
+
+При последующих запусках (если код не менялся) `--build` не нужен:
+
+```bash
+docker compose up        # запуск из кэшированных образов
+docker compose up -d     # запуск в фоне
+docker compose down      # остановка
+docker compose logs -f   # просмотр логов
+```
+
+### Вариант 2: Локальный запуск без Docker
 
 ```bash
 # 1. Клонировать репозиторий
@@ -200,21 +205,30 @@ cd subsidy-gov-scoring
 # 2. Установить зависимости
 pip install -r requirements.txt
 
-# 3. Скачать данные и поместить в data
+# 3. Поместить данные в data/subsidies.xlsx
 
-# 4. Запустить пайплайн
+# 4a. Только CLI-скоринг (shortlist в output/)
 python main.py
+
+# 4b. API + Dashboard 
+python main.py --serve                           
+streamlit run app/dashboard.py
 ```
 
+---
 
-## API endpoints (этап 2)
+## API endpoints
 
 | Метод | Путь | Описание |
 |-------|------|----------|
 | POST | `/score` | Score одной заявки |
-| POST | `/rank` | Ранжирование списка заявок |
-| GET | `/explain/{app_id}` | Детальное объяснение score + SHAP |
-| GET | `/stats` | Агрегированная статистика |
+| POST | `/rank` | Ранжирование списка заявок с фильтрами |
+| GET | `/explain/{app_id}` | Детальное объяснение score заявки |
+| GET | `/stats` | Агрегированная статистика с фильтрами |
+| GET | `/applications` | Список заявок с пагинацией |
+| GET | `/applications/{app_id}` | Одна заявка по номеру |
+| GET | `/regions` | Справочник регионов со статистикой |
+| GET | `/directions` | Справочник направлений со статистикой |
 | GET | `/health` | Проверка работоспособности |
 
 ---
@@ -232,14 +246,17 @@ python main.py
 ## Зависимости
 
 ```
-pandas>=2.0         # Обработка данных
-openpyxl>=3.1       # Чтение xlsx
-catboost>=1.2       # ML-модель (этап 2)
-shap>=0.43          # Explainability (этап 2)
-fastapi>=0.100      # API (этап 2)
-uvicorn>=0.23       # ASGI-сервер (этап 2)
-streamlit>=1.28     # Dashboard (этап 2)
-plotly>=5.15        # Визуализации (этап 2)
+pandas>=2.0              # Обработка данных
+openpyxl>=3.1            # Чтение xlsx
+fastapi>=0.100           # REST API
+uvicorn[standard]>=0.23  # ASGI-сервер
+pydantic>=2.0            # Валидация данных
+httpx>=0.27              # HTTP-клиент (dashboard → API)
+streamlit>=1.28          # Dashboard
+plotly>=5.15             # Визуализации
+catboost>=1.2            # ML-модель (этап 2)
+shap>=0.43               # Explainability (этап 2)
+
 ```
 
 
