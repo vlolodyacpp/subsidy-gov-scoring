@@ -1,17 +1,22 @@
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).parent))
 
 import streamlit as st
 import plotly.express as px
 import pandas as pd
-from src.pipeline import run_pipeline
-from src.features import build_feature_tables, extract_features_batch
-from src.scoring import score_batch, score_single, generate_shortlist, get_score_distribution
-    
+from api_client import (
+    check_health,
+    get_regions,
+    get_directions,
+    get_stats,
+    rank_applications,
+    get_explanation,
+)
 
-# стили 
+
+# стили
 
 def load_css():
     css_path = Path(__file__).parent / "style.css"
@@ -19,33 +24,20 @@ def load_css():
         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
 
-# загрузка данных 
+# sidebar с фильтрами — возвращает выбранные значения
 
-@st.cache_data
-def load_data():
-    df = run_pipeline("data/subsidies.xlsx")
-    tables = build_feature_tables(df)
-    features = extract_features_batch(df, tables)
-    scores = score_batch(features)
-
-    combined = df.copy()
-    combined["score"] = scores["score"].values
-    combined["risk_level"] = scores["risk_level"].values
-    combined["top_factor_label"] = scores["top_factor_label"].values
-
-    return combined, features, scores
-
-
-# блок 3: sidebar с фильтрами 
-
-def render_sidebar(df: pd.DataFrame) -> pd.DataFrame:
+def render_sidebar() -> dict:
     st.sidebar.header("🔍 Фильтры")
 
-    regions = ["Все"] + sorted(df["region"].unique().tolist())
-    selected_region = st.sidebar.selectbox("Регион", regions)
+    # справочники из API
+    regions_data = get_regions()
+    directions_data = get_directions()
 
-    directions = ["Все"] + sorted(df["direction"].unique().tolist())
-    selected_direction = st.sidebar.selectbox("Направление", directions)
+    region_names = ["Все"] + [r["region"] for r in regions_data]
+    selected_region = st.sidebar.selectbox("Регион", region_names)
+
+    direction_names = ["Все"] + [d["direction"] for d in directions_data]
+    selected_direction = st.sidebar.selectbox("Направление", direction_names)
 
     score_min, score_max = st.sidebar.slider(
         "Диапазон баллов",
@@ -55,42 +47,43 @@ def render_sidebar(df: pd.DataFrame) -> pd.DataFrame:
         step=1.0,
     )
 
-    filtered = df.copy()
-    if selected_region != "Все":
-        filtered = filtered[filtered["region"] == selected_region]
-    if selected_direction != "Все":
-        filtered = filtered[filtered["direction"] == selected_direction]
-    filtered = filtered[
-        (filtered["score"] >= score_min) & (filtered["score"] <= score_max)
-    ]
+    filters = {
+        "region": selected_region if selected_region != "Все" else None,
+        "direction": selected_direction if selected_direction != "Все" else None,
+        "min_score": score_min if score_min > 0 else None,
+        "max_score": score_max if score_max < 100 else None,
+    }
 
-    st.sidebar.metric("Записей после фильтра", f"{len(filtered):,}")
-
-    return filtered
+    return filters
 
 
-# блок 4: метрики 
+# метрики
 
-def render_metrics(filtered: pd.DataFrame):
+def render_metrics(stats: dict):
     st.markdown('<p class="section-header">📊 Ключевые метрики</p>', unsafe_allow_html=True)
 
     col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Средний балл", f"{filtered['score'].mean():.1f}")
-    col2.metric("Медиана", f"{filtered['score'].median():.1f}")
-    col3.metric("Всего заявок", f"{len(filtered):,}")
+    col1.metric("Средний балл", f"{stats['mean_score']:.1f}")
+    col2.metric("Медиана", f"{stats['median_score']:.1f}")
+    col3.metric("Всего заявок", f"{stats['total_records']:,}")
 
-    risk_counts = filtered["risk_level"].value_counts()
-    high_risk = risk_counts.get("Высокий", 0)
+    high_risk = stats["risk_distribution"].get("Высокий", 0)
     col4.metric("Высокий риск", f"{high_risk:,}")
 
 
-# блок 5: графики 
+# графики
 
-def render_charts(filtered: pd.DataFrame):
+def render_charts(applications: list[dict]):
     st.markdown('<p class="section-header">📈 Распределение скоров</p>', unsafe_allow_html=True)
 
+    if not applications:
+        st.info("Нет данных для графика.")
+        return
+
+    df = pd.DataFrame(applications)
+
     fig = px.histogram(
-        filtered,
+        df,
         x="score",
         nbins=30,
         color="risk_level",
@@ -105,21 +98,16 @@ def render_charts(filtered: pd.DataFrame):
     st.plotly_chart(fig, width="stretch")
 
 
-# блок 6: таблица шортлиста 
+# таблица шортлиста
 
-def render_shortlist(filtered: pd.DataFrame):
+def render_shortlist(applications: list[dict]) -> pd.DataFrame:
     st.markdown('<p class="section-header">📋 Shortlist заявок</p>', unsafe_allow_html=True)
 
-    display_cols = [
-        "app_number", "region", "district", "direction",
-        "subsidy_type", "amount", "score", "risk_level", "top_factor_label",
-    ]
-    shortlist = (
-        filtered[display_cols]
-        .sort_values("score", ascending=False)
-        .head(50)
-        .reset_index(drop=True)
-    )
+    if not applications:
+        st.info("Нет заявок для отображения.")
+        return pd.DataFrame()
+
+    shortlist = pd.DataFrame(applications).reset_index(drop=True)
 
     st.dataframe(
         shortlist,
@@ -134,34 +122,30 @@ def render_shortlist(filtered: pd.DataFrame):
             "amount": st.column_config.NumberColumn("Сумма", format="%.0f ₸"),
             "score": st.column_config.ProgressColumn("Балл", min_value=0, max_value=100),
             "risk_level": "Риск",
-            "top_factor_label": "Главный фактор",
+            "top_factor": "Главный фактор",
         },
     )
 
     return shortlist
 
 
-# блок 7: детали заявки 
+# детали заявки
 
-def render_details(filtered: pd.DataFrame, features: pd.DataFrame):
+def render_details(app_numbers: list[str]):
     st.markdown('<p class="section-header">🔎 Детали заявки</p>', unsafe_allow_html=True)
 
-    app_numbers = filtered["app_number"].tolist()
     if not app_numbers:
         st.warning("Нет заявок для отображения.")
         return
 
     selected_app = st.selectbox("Выберите заявку", app_numbers)
 
-    row = filtered[filtered["app_number"] == selected_app].iloc[0]
-    row_idx = filtered[filtered["app_number"] == selected_app].index[0]
-    app_features = features.loc[row_idx].to_dict()
-    result = score_single(app_features)
+    detail = get_explanation(selected_app)
 
     # карточка со скором и риском
     risk_class = {
         "низкий": "risk-low", "средний": "risk-medium", "высокий": "risk-high",
-    }.get(result.risk_level, "risk-medium")
+    }.get(detail["risk_level"].lower(), "risk-medium")
 
     col1, col2 = st.columns([1, 2])
 
@@ -169,14 +153,14 @@ def render_details(filtered: pd.DataFrame, features: pd.DataFrame):
         st.markdown(f"""
         <div class="detail-card">
             <p class="detail-score-label">Score</p>
-            <p class="detail-score">{result.score}</p>
-            <span class="risk-badge {risk_class}">{result.risk_level} риск</span>
+            <p class="detail-score">{detail['score']}</p>
+            <span class="risk-badge {risk_class}">{detail['risk_level']} риск</span>
         </div>
         """, unsafe_allow_html=True)
 
     with col2:
         st.markdown('<div class="detail-card">', unsafe_allow_html=True)
-        for line in result.explanation:
+        for line in detail["explanation"]:
             if "✓" in line:
                 level = "high"
             elif "●" in line:
@@ -192,34 +176,60 @@ def render_details(filtered: pd.DataFrame, features: pd.DataFrame):
     # информация о заявке
     st.markdown(f"""
     <div class="app-info-row">
-        <div>Регион: <span>{row.get("region", "—")}</span></div>
-        <div>Направление: <span>{row.get("direction", "—")}</span></div>
-        <div>Тип: <span>{row.get("subsidy_type", "—")}</span></div>
-        <div>Сумма: <span>{row.get("amount", 0):,.0f} ₸</span></div>
+        <div>Регион: <span>{detail.get("region", "—")}</span></div>
+        <div>Направление: <span>{detail.get("direction", "—")}</span></div>
+        <div>Тип: <span>{detail.get("subsidy_type", "—")}</span></div>
+        <div>Сумма: <span>{detail.get("amount", 0):,.0f} ₸</span></div>
     </div>
     """, unsafe_allow_html=True)
 
 
-# точка входа 
+# точка входа
 
 def main():
-    st.set_page_config(page_title="Subsidy Scoring", page_icon="🏛️", layout="wide", initial_sidebar_state="expanded")
+    st.set_page_config(
+        page_title="Subsidy Scoring",
+        page_icon="🏛️",
+        layout="wide",
+        initial_sidebar_state="expanded",
+    )
     load_css()
 
     st.markdown('<p class="main-title">🏛️ Subsidy Scoring System</p>', unsafe_allow_html=True)
 
-    combined, features, scores = load_data()
-    filtered = render_sidebar(combined)
+    # проверка доступности API
+    health = check_health()
+    if not health:
+        st.error(
+            "API недоступен. Запустите сервер: `python main.py --serve`"
+        )
+        return
+
+    # фильтры
+    filters = render_sidebar()
+
+    # статистика с учётом фильтров
+    stats = get_stats(**filters)
+
+    # ранжирование для графика и таблицы (до 1000 для гистограммы)
+    rank_data = rank_applications(**filters, top_n=1000)
+    applications = rank_data["applications"]
+
+    st.sidebar.metric("Записей после фильтра", f"{rank_data['total_filtered']:,}")
 
     st.markdown(
-        f'<p class="subtitle">Всего заявок: {len(combined):,} · После фильтра: {len(filtered):,}</p>',
+        f'<p class="subtitle">Всего заявок: {health["records_loaded"]:,} · '
+        f'После фильтра: {rank_data["total_filtered"]:,}</p>',
         unsafe_allow_html=True,
     )
 
-    render_metrics(filtered)
-    render_charts(filtered)
-    render_shortlist(filtered)
-    render_details(filtered, features)
+    render_metrics(stats)
+    render_charts(applications)
+    render_shortlist(applications[:50])
+
+    # детали — номера заявок из shortlist
+    app_numbers = [a["app_number"] for a in applications[:50]]
+    render_details(app_numbers)
 
 
 if __name__ == "__main__":

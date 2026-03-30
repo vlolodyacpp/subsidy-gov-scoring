@@ -13,7 +13,6 @@ from src.scoring import (
     score_single,
     score_batch,
     get_score_distribution,
-    WEIGHTS,
     FACTOR_LABELS,
 )
 from src.schemas import (
@@ -84,8 +83,50 @@ app.add_middleware(
 )
 
 
+def _get_combined() -> pd.DataFrame:
+    return pd.concat([app.state.df, app.state.scores], axis=1)
+
+
+def _apply_filters(
+    combined: pd.DataFrame,
+    region: str | None = None,
+    direction: str | None = None,
+    subsidy_type: str | None = None,
+    min_score: float | None = None,
+    max_score: float | None = None,
+    risk_level: str | None = None,
+) -> pd.DataFrame:
+    mask = pd.Series(True, index=combined.index)
+    if region:
+        mask &= combined["region"] == region
+    if direction:
+        mask &= combined["direction"] == direction
+    if subsidy_type:
+        mask &= combined["subsidy_type"] == subsidy_type
+    if min_score is not None:
+        mask &= combined["score"] >= min_score
+    if max_score is not None:
+        mask &= combined["score"] <= max_score
+    if risk_level:
+        mask &= combined["risk_level"] == risk_level
+    return combined[mask]
+
+
+def _make_app_brief(row: pd.Series) -> ApplicationBrief:
+    return ApplicationBrief(
+        app_number=str(row.get("app_number", "")),
+        region=str(row.get("region", "")),
+        district=str(row.get("district", "")),
+        direction=str(row.get("direction", "")),
+        subsidy_type=str(row.get("subsidy_type", "")),
+        amount=float(row.get("amount", 0)),
+        score=float(row.get("score", 0)),
+        risk_level=str(row.get("risk_level", "")),
+        top_factor=str(row.get("top_factor_label", "")),
+    )
+
+
 def _build_factor_details(features_dict: dict, scoring_result) -> list[FactorDetail]:
-    # преобразует ScoringResult + features в список FactorDetail
     details = []
     sorted_factors = sorted(
         scoring_result.factors.items(), key=lambda x: x[1], reverse=True
@@ -110,19 +151,22 @@ def _build_factor_details(features_dict: dict, scoring_result) -> list[FactorDet
     return details
 
 
-def _make_app_brief(row: pd.Series, score_row: pd.Series) -> ApplicationBrief:
-    # создаёт ApplicationBrief из строк df и scores
-    return ApplicationBrief(
-        app_number=str(row.get("app_number", "")),
-        region=str(row.get("region", "")),
-        district=str(row.get("district", "")),
-        direction=str(row.get("direction", "")),
-        subsidy_type=str(row.get("subsidy_type", "")),
-        amount=float(row.get("amount", 0)),
-        score=float(score_row.get("score", 0)),
-        risk_level=str(score_row.get("risk_level", "")),
-        top_factor=str(score_row.get("top_factor_label", "")),
+def _group_stats(column: str) -> list[dict]:
+    combined = _get_combined()
+    stats = (
+        combined.groupby(column)["score"]
+        .agg(count="size", avg_score="mean")
+        .reset_index()
+        .sort_values("count", ascending=False)
     )
+    return [
+        {
+            column: row[column],
+            "count": int(row["count"]),
+            "avg_score": round(float(row["avg_score"]), 1),
+        }
+        for _, row in stats.iterrows()
+    ]
 
 
 # ── endpoints ─────────────────────────────────────────────────
@@ -130,7 +174,6 @@ def _make_app_brief(row: pd.Series, score_row: pd.Series) -> ApplicationBrief:
 
 @app.get("/health", response_model=HealthResponse, tags=["Системные"])
 async def health_check():
-    # проверка работоспособности API
     return HealthResponse(
         status="ok",
         records_loaded=len(app.state.df),
@@ -139,7 +182,6 @@ async def health_check():
 
 @app.post("/score", response_model=ScoreResponse, tags=["Скоринг"])
 async def score_application(request: ScoreRequest):
-    # скоринг одной заявки — принимает сырые данные, вычисляет признаки, возвращает балл
     row = pd.Series(
         {
             "region": request.region,
@@ -152,8 +194,7 @@ async def score_application(request: ScoreRequest):
         }
     )
 
-    tables = app.state.tables
-    features_dict = extract_features(row, tables)
+    features_dict = extract_features(row, app.state.tables)
     result = score_single(features_dict)
 
     return ScoreResponse(
@@ -166,68 +207,36 @@ async def score_application(request: ScoreRequest):
 
 @app.post("/rank", response_model=RankResponse, tags=["Скоринг"])
 async def rank_applications(request: RankRequest):
-    # ранжирование заявок с фильтрами, возвращает топ-N отсортированных
-    df = app.state.df
-    scores = app.state.scores
+    combined = _get_combined()
+    filtered = _apply_filters(
+        combined,
+        region=request.region,
+        direction=request.direction,
+        subsidy_type=request.subsidy_type,
+        min_score=request.min_score,
+        max_score=request.max_score,
+        risk_level=request.risk_level,
+    ).sort_values("score", ascending=False)
 
-    # объединяем для фильтрации
-    combined = pd.concat([df, scores], axis=1)
-
-    # применяем фильтры
-    mask = pd.Series(True, index=combined.index)
-
-    if request.region:
-        mask &= combined["region"] == request.region
-    if request.direction:
-        mask &= combined["direction"] == request.direction
-    if request.subsidy_type:
-        mask &= combined["subsidy_type"] == request.subsidy_type
-    if request.min_score is not None:
-        mask &= combined["score"] >= request.min_score
-    if request.max_score is not None:
-        mask &= combined["score"] <= request.max_score
-    if request.risk_level:
-        mask &= combined["risk_level"] == request.risk_level
-
-    filtered = combined[mask].sort_values("score", ascending=False)
     total_filtered = len(filtered)
     top = filtered.head(request.top_n)
 
-    applications = []
-    for idx, row in top.iterrows():
-        applications.append(
-            ApplicationBrief(
-                app_number=str(row.get("app_number", "")),
-                region=str(row.get("region", "")),
-                district=str(row.get("district", "")),
-                direction=str(row.get("direction", "")),
-                subsidy_type=str(row.get("subsidy_type", "")),
-                amount=float(row.get("amount", 0)),
-                score=float(row.get("score", 0)),
-                risk_level=str(row.get("risk_level", "")),
-                top_factor=str(row.get("top_factor_label", "")),
-            )
-        )
-
     return RankResponse(
         total_filtered=total_filtered,
-        returned=len(applications),
-        applications=applications,
+        returned=len(top),
+        applications=[_make_app_brief(row) for _, row in top.iterrows()],
     )
 
 
 @app.get("/explain/{app_id}", response_model=ExplainResponse, tags=["Скоринг"])
 async def explain_score(app_id: str):
-    # детальное объяснение скора — ищет заявку по номеру, возвращает факторы
     df = app.state.df
-    tables = app.state.tables
-
     match = df[df["app_number"].astype(str) == app_id]
     if match.empty:
         raise HTTPException(status_code=404, detail=f"Заявка {app_id} не найдена")
 
     row = match.iloc[0]
-    features_dict = extract_features(row, tables)
+    features_dict = extract_features(row, app.state.tables)
     result = score_single(features_dict)
 
     return ExplainResponse(
@@ -245,42 +254,44 @@ async def explain_score(app_id: str):
 
 
 @app.get("/stats", response_model=StatsResponse, tags=["Аналитика"])
-async def get_stats():
-    # агрегированная статистика — распределение баллов, риски, топ регионов
-    df = app.state.df
-    scores = app.state.scores
+async def get_stats(
+    region: str | None = Query(None, description="Фильтр по региону"),
+    direction: str | None = Query(None, description="Фильтр по направлению"),
+    min_score: float | None = Query(None, ge=0, le=100, description="Минимальный балл"),
+    max_score: float | None = Query(None, ge=0, le=100, description="Максимальный балл"),
+):
+    combined = _get_combined()
+    filtered = _apply_filters(
+        combined, region=region, direction=direction,
+        min_score=min_score, max_score=max_score,
+    )
+    filtered_scores = app.state.scores.loc[filtered.index]
 
-    dist = get_score_distribution(scores)
+    dist = get_score_distribution(filtered_scores)
 
     # статистика по регионам
-    combined = pd.concat([df[["region"]], scores[["score"]]], axis=1)
     region_stats = (
-        combined.groupby("region")
-        .agg(count=("score", "size"), avg_score=("score", "mean"))
+        filtered.groupby("region")["score"]
+        .agg(count="size", avg_score="mean")
         .reset_index()
         .sort_values("avg_score", ascending=False)
     )
 
-    # добавляем approval_rate из справочных таблиц
     ar = app.state.tables["approval_rates"]["region"]
-    top_regions = []
-    for _, r in region_stats.head(10).iterrows():
-        approval_rate = ar.get(r["region"], {}).get("approval_rate", 0)
-        top_regions.append(
-            RegionStat(
-                region=r["region"],
-                count=int(r["count"]),
-                avg_score=round(float(r["avg_score"]), 1),
-                approval_rate=round(float(approval_rate), 4),
-            )
+    top_regions = [
+        RegionStat(
+            region=r["region"],
+            count=int(r["count"]),
+            avg_score=round(float(r["avg_score"]), 1),
+            approval_rate=round(float(ar.get(r["region"], {}).get("approval_rate", 0)), 4),
         )
+        for _, r in region_stats.head(10).iterrows()
+    ]
 
-    # приводим к dict[str, int]
-    risk_raw = dist["risk_distribution"]
-    risk_dict = {str(k): int(v) for k, v in risk_raw.items()}
+    risk_dict = {str(k): int(v) for k, v in dist["risk_distribution"].items()}
 
     return StatsResponse(
-        total_records=len(df),
+        total_records=len(filtered),
         mean_score=dist["mean"],
         median_score=dist["median"],
         std_score=dist["std"],
@@ -297,22 +308,16 @@ async def list_applications(
     per_page: int = Query(20, ge=1, le=100, description="Заявок на странице"),
     region: str | None = Query(None, description="Фильтр по региону"),
     direction: str | None = Query(None, description="Фильтр по направлению"),
+    min_score: float | None = Query(None, ge=0, le=100, description="Минимальный балл"),
+    max_score: float | None = Query(None, ge=0, le=100, description="Максимальный балл"),
     sort_by: str = Query("score", description="Поле сортировки: score, amount"),
     sort_order: str = Query("desc", description="Порядок: asc / desc"),
 ):
-    # список заявок с пагинацией и фильтрацией
-    df = app.state.df
-    scores = app.state.scores
-
-    combined = pd.concat([df, scores], axis=1)
-
-    mask = pd.Series(True, index=combined.index)
-    if region:
-        mask &= combined["region"] == region
-    if direction:
-        mask &= combined["direction"] == direction
-
-    filtered = combined[mask]
+    combined = _get_combined()
+    filtered = _apply_filters(
+        combined, region=region, direction=direction,
+        min_score=min_score, max_score=max_score,
+    )
 
     ascending = sort_order.lower() == "asc"
     if sort_by in filtered.columns:
@@ -320,93 +325,33 @@ async def list_applications(
 
     total = len(filtered)
     start = (page - 1) * per_page
-    end = start + per_page
-    page_data = filtered.iloc[start:end]
-
-    applications = []
-    for idx, row in page_data.iterrows():
-        applications.append(
-            ApplicationBrief(
-                app_number=str(row.get("app_number", "")),
-                region=str(row.get("region", "")),
-                district=str(row.get("district", "")),
-                direction=str(row.get("direction", "")),
-                subsidy_type=str(row.get("subsidy_type", "")),
-                amount=float(row.get("amount", 0)),
-                score=float(row.get("score", 0)),
-                risk_level=str(row.get("risk_level", "")),
-                top_factor=str(row.get("top_factor_label", "")),
-            )
-        )
+    page_data = filtered.iloc[start:start + per_page]
 
     return PaginatedApplications(
         total=total,
         page=page,
         per_page=per_page,
-        applications=applications,
+        applications=[_make_app_brief(row) for _, row in page_data.iterrows()],
     )
 
 
 @app.get("/applications/{app_id}", response_model=ApplicationBrief, tags=["Заявки"])
 async def get_application(app_id: str):
-    # получить информацию о конкретной заявке по номеру
     df = app.state.df
-    scores = app.state.scores
-
     match = df[df["app_number"].astype(str) == app_id]
     if match.empty:
         raise HTTPException(status_code=404, detail=f"Заявка {app_id} не найдена")
 
     idx = match.index[0]
-    row = df.loc[idx]
-    score_row = scores.loc[idx]
-
-    return _make_app_brief(row, score_row)
+    combined = _get_combined()
+    return _make_app_brief(combined.loc[idx])
 
 
 @app.get("/regions", tags=["Справочники"])
 async def list_regions():
-    # список всех регионов с количеством заявок и средним баллом
-    df = app.state.df
-    scores = app.state.scores
-
-    combined = pd.concat([df[["region"]], scores[["score"]]], axis=1)
-    stats = (
-        combined.groupby("region")
-        .agg(count=("score", "size"), avg_score=("score", "mean"))
-        .reset_index()
-        .sort_values("count", ascending=False)
-    )
-
-    return [
-        {
-            "region": row["region"],
-            "count": int(row["count"]),
-            "avg_score": round(float(row["avg_score"]), 1),
-        }
-        for _, row in stats.iterrows()
-    ]
+    return _group_stats("region")
 
 
 @app.get("/directions", tags=["Справочники"])
 async def list_directions():
-    # список всех направлений субсидирования с количеством заявок
-    df = app.state.df
-    scores = app.state.scores
-
-    combined = pd.concat([df[["direction"]], scores[["score"]]], axis=1)
-    stats = (
-        combined.groupby("direction")
-        .agg(count=("score", "size"), avg_score=("score", "mean"))
-        .reset_index()
-        .sort_values("count", ascending=False)
-    )
-
-    return [
-        {
-            "direction": row["direction"],
-            "count": int(row["count"]),
-            "avg_score": round(float(row["avg_score"]), 1),
-        }
-        for _, row in stats.iterrows()
-    ]
+    return _group_stats("direction")
