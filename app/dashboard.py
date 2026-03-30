@@ -9,7 +9,7 @@ import pandas as pd
 from src.pipeline import run_pipeline
 from src.features import build_feature_tables, extract_features_batch
 from src.scoring import score_batch, score_single, generate_shortlist, get_score_distribution
-
+    
 
 # стили 
 
@@ -103,7 +103,7 @@ def render_charts(filtered: pd.DataFrame):
         labels={"score": "Балл", "risk_level": "Уровень риска", "count": "Кол-во"},
     )
     fig.update_layout(bargap=0.05, height=350, margin=dict(t=10, b=30))
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
 
 
 # блок 6: таблица шортлиста 
@@ -124,7 +124,7 @@ def render_shortlist(filtered: pd.DataFrame):
 
     st.dataframe(
         shortlist,
-        use_container_width=True,
+        width="stretch",
         height=400,
         column_config={
             "app_number": "Номер заявки",
@@ -204,7 +204,7 @@ def render_details(filtered: pd.DataFrame, features: pd.DataFrame):
 # точка входа 
 
 def main():
-    st.set_page_config(page_title="Subsidy Scoring", page_icon="🏛️", layout="wide")
+    st.set_page_config(page_title="Subsidy Scoring", page_icon="🏛️", layout="wide", initial_sidebar_state="expanded")
     load_css()
 
     st.markdown('<p class="main-title">🏛️ Subsidy Scoring System</p>', unsafe_allow_html=True)

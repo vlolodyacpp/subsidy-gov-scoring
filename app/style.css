@@ -1,10 +1,12 @@
 /* общие стили страницы */
 .block-container {
-    padding-top: 1.5rem;
+    padding-top: 1rem;
     padding-bottom: 1rem;
 }
 
-/* скрываем стандартный header/footer streamlit */
+
+
+/* скрываем лишние элементы streamlit */
 #MainMenu {
     visibility: hidden;
 }
@@ -13,37 +15,52 @@ footer {
     visibility: hidden;
 }
 
-header {
-    visibility: hidden;
+header[data-testid="stHeader"] {
+    background: transparent !important;
+    background-color: transparent !important;
+}
+
+.stAppDeployButton {
+    display: none !important;
 }
 
 
-/* ── sidebar ── */
+
+/* sidebar */
 [data-testid="stSidebar"] {
-    padding-top: 0.1rem;
+    padding-top: 0rem;
 }
 
 [data-testid="stSidebar"] h2 {
-    margin-top: 0;
     padding-top: 0;
 }
 
+[data-testid="stSidebarHeader"] {
+    margin-bottom: 0;
+    padding-top: 0;
+}
 
-/* ── заголовок и подзаголовок ── */
+[data-testid="stSidebarUserContent"] {
+    margin-top: -1rem;
+}
+
+
+
+/* заголовок и подзаголовок */
 .main-title {
-    font-size: 2.2rem;
+    font-size: 2rem !important;
     font-weight: 800;
     margin-bottom: 0.2rem;
 }
 
 .subtitle {
-    font-size: 1.15rem;
+    font-size: 1rem !important;
     color: #a0a0b0;
     margin-bottom: 1.5rem;
 }
 
 
-/* ── карточки метрик ── */
+/* карточки метрик */
 [data-testid="stMetric"] {
     background: #1a1a2e;
     border: 1px solid #3a3a5a;
@@ -62,9 +79,9 @@ header {
 }
 
 
-/* ── секции ── */
+/* секции */
 .section-header {
-    font-size: 1.3rem;
+    font-size: 1.5rem !important;
     font-weight: 700;
     margin-top: 2rem;
     margin-bottom: 0.8rem;
@@ -73,13 +90,13 @@ header {
 }
 
 
-/* ── таблица ── */
+/* таблица */
 [data-testid="stDataFrame"] {
     border-radius: 8px;
 }
 
 
-/* ── детали заявки ── */
+/* детали заявки */
 .detail-card {
     background: #1a1a2e;
     border: 1px solid #3a3a5a;
@@ -133,10 +150,10 @@ header {
     background: #12121e;
     border-left: 4px solid #3a3a5a;
     border-radius: 0 8px 8px 0;
-    padding: 10px 16px;
-    margin-bottom: 8px;
-    font-size: 1rem;
-    line-height: 1.5;
+    padding: 12px 20px;
+    margin-bottom: 12px;
+    font-size: 1.1rem;
+    line-height: 1.7;
 }
 
 .explanation-item.high {
@@ -153,10 +170,12 @@ header {
 
 .app-info-row {
     display: flex;
-    gap: 2rem;
-    margin-top: 1rem;
+    gap: 2.5rem;
+    margin-top: 1.5rem;
+    margin-bottom: 3rem;
+    padding: 1rem 0;
     color: #8888aa;
-    font-size: 0.9rem;
+    font-size: 1.05rem;
 }
 
 .app-info-row span {
