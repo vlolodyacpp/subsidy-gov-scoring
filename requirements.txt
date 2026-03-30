@@ -1,2 +1,5 @@
 pandas>=2.0         # Обработка данных
 openpyxl>=3.1       # Чтение xlsx
+fastapi>=0.100      # REST API
+uvicorn[standard]>=0.23  # ASGI-сервер
+pydantic>=2.0       # Валидация данных
