@@ -1,8 +1,11 @@
 """запуск полного пайплайна скоринга.(временное решение на первичном этапе)"""
 import sys
+import argparse
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
+
+DATA_PATH = "data/subsidies.xlsx"
 
 from src.pipeline import run_pipeline
 from src.features import build_feature_tables, extract_features_batch

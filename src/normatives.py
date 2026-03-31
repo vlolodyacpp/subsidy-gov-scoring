@@ -1,5 +1,5 @@
 # модуль для работы с эталонными нормативами субсидий
-from normatives_dict import NORMATIVES
+from src.normatives_dict import NORMATIVES
 
 
 def build_normative_lookup() -> dict[str, int]:
