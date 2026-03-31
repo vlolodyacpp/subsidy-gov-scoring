@@ -1,25 +1,52 @@
-# экспертные веса на основе правил субсидирования 
-
 import pandas as pd
 import numpy as np
 from dataclasses import dataclass
 
 
-# веса факторов (сумма = 1.0)
+# веса факторов v2 (сумма = 1.0)
 WEIGHTS = {
-    "region_approval_rate": 0.25,       # региональная одобряемость
-    "direction_approval_rate": 0.20,    # одобряемость направления
-    "subsidy_type_approval_rate": 0.20, # одобряемость типа субсидии
-    "amount_adequacy": 0.20,            # адекватность суммы
-    "season_approval_rate": 0.15,       # сезонность подачи
+    # группа 1: нормативное соответствие (26%)
+    "normative_match":              0.10,
+    "amount_normative_integrity":   0.08,
+    "amount_adequacy":              0.08,
+
+    # группа 2: сроки и бюджет (30%)
+    "deadline_compliance":          0.08,
+    "budget_pressure":              0.12,
+    "queue_position":               0.10,
+
+    # группа 3: региональная специфика (29%)
+    "region_specialization":        0.10,
+    "region_direction_approval_rate": 0.12,
+    "akimat_approval_rate":         0.07,
+
+    # группа 4: характеристики заявки (15%)
+    "unit_count":                   0.05,
+    "direction_approval_rate":      0.05,
+    "subsidy_type_approval_rate":   0.05,
 }
 
 FACTOR_LABELS = {
-    "region_approval_rate": "Региональная одобряемость",
-    "direction_approval_rate": "Одобряемость направления",
-    "subsidy_type_approval_rate": "Одобряемость типа субсидии",
-    "amount_adequacy": "Адекватность суммы заявки",
-    "season_approval_rate": "Сезонность подачи",
+    "normative_match":              "Соответствие норматива эталону",
+    "amount_normative_integrity":   "Арифметическая корректность суммы",
+    "amount_adequacy":              "Адекватность суммы заявки",
+    "deadline_compliance":          "Соблюдение срока подачи",
+    "budget_pressure":              "Бюджетное давление",
+    "queue_position":               "Позиция в очереди подачи",
+    "region_specialization":        "Профильность направления для региона",
+    "region_direction_approval_rate": "Одобряемость направления в регионе",
+    "akimat_approval_rate":         "Уровень одобрения акимата",
+    "unit_count":                   "Количество заявленных единиц",
+    "direction_approval_rate":      "Одобряемость направления",
+    "subsidy_type_approval_rate":   "Одобряемость типа субсидии",
+}
+
+# группировка факторов для объяснений
+FACTOR_GROUPS = {
+    "Нормативное соответствие": ["normative_match", "amount_normative_integrity", "amount_adequacy"],
+    "Сроки и бюджет": ["deadline_compliance", "budget_pressure", "queue_position"],
+    "Региональная специфика": ["region_specialization", "region_direction_approval_rate", "akimat_approval_rate"],
+    "Характеристики заявки": ["unit_count", "direction_approval_rate", "subsidy_type_approval_rate"],
 }
 
 
@@ -32,7 +59,7 @@ class ScoringResult:
 
 
 def score_single(features: dict) -> ScoringResult:
-    # скоринг одной заявки с объяснением 
+    # скоринг одной заявки с объяснением по 12 факторам
     factors = {}
     raw_score = 0.0
 
@@ -44,19 +71,37 @@ def score_single(features: dict) -> ScoringResult:
 
     score = round(min(max(raw_score, 0), 100), 1)
 
-    # генерация объяснений
+    # генерация объяснений по группам
     explanation = []
-    sorted_factors = sorted(factors.items(), key=lambda x: x[1], reverse=True)
-    # сортируем факторы по убыванию вклада для лучшей наглядности пользователю
-    for name, contrib in sorted_factors:
-        label = FACTOR_LABELS.get(name, name)
-        value = features.get(name, 0)
-        if contrib >= 15:
-            explanation.append(f"✓ {label}: высокий ({value:.0%}) — +{contrib:.1f} баллов")
-        elif contrib >= 8:
-            explanation.append(f"● {label}: средний ({value:.0%}) — +{contrib:.1f} баллов")
+    for group_name, group_factors in FACTOR_GROUPS.items():
+        group_total = sum(factors.get(f, 0) for f in group_factors)
+        group_max = sum(WEIGHTS.get(f, 0) for f in group_factors) * 100
+
+        if group_max > 0:
+            group_pct = group_total / group_max
         else:
-            explanation.append(f"✗ {label}: низкий ({value:.0%}) — +{contrib:.1f} баллов")
+            group_pct = 0
+
+        if group_pct >= 0.7:
+            icon = "✓"
+            level = "сильная"
+        elif group_pct >= 0.4:
+            icon = "●"
+            level = "средняя"
+        else:
+            icon = "✗"
+            level = "слабая"
+
+        explanation.append(
+            f"{icon} {group_name}: {level} ({group_total:.1f}/{group_max:.0f} баллов)"
+        )
+
+        # детализация по факторам внутри группы
+        for factor in group_factors:
+            value = features.get(factor, 0)
+            contrib = factors.get(factor, 0)
+            label = FACTOR_LABELS.get(factor, factor)
+            explanation.append(f"    {label}: {value:.0%} → +{contrib:.1f}")
 
     # определяем уровень риска
     risk_level = "низкий" if score >= 70 else "средний" if score >= 45 else "высокий"
@@ -70,7 +115,7 @@ def score_single(features: dict) -> ScoringResult:
 
 
 def score_batch(features_df: pd.DataFrame) -> pd.DataFrame:
-    # векторизированный скоринг каждой заявки.
+    # векторизированный скоринг по 12 факторам
     scores = pd.Series(0.0, index=features_df.index)
     factor_contributions = {}
 
@@ -88,10 +133,16 @@ def score_batch(features_df: pd.DataFrame) -> pd.DataFrame:
         labels=["Высокий", "Средний", "Низкий"],
     )
 
-    # главный фактор
+    # главный фактор и главная группа
     contrib_cols = [c for c in result.columns if c.startswith("contrib_")]
     result["top_factor"] = result[contrib_cols].idxmax(axis=1).str.replace("contrib_", "")
     result["top_factor_label"] = result["top_factor"].map(FACTOR_LABELS)
+
+    # группа с наибольшим суммарным вкладом
+    for group_name, group_factors in FACTOR_GROUPS.items():
+        group_cols = [f"contrib_{f}" for f in group_factors if f"contrib_{f}" in result.columns]
+        if group_cols:
+            result[f"group_{group_name}"] = result[group_cols].sum(axis=1).round(1)
 
     return result
 
@@ -102,7 +153,7 @@ def generate_shortlist(
     top_n: int = 50,
     output_dir: str = "output",
 ) -> pd.DataFrame:
-    # формирование shortlist — топ-N заявок для комиссии. Сохраняет CSV 
+    # формирование shortlist — топ-N заявок для комиссии
     from pathlib import Path
 
     combined = pd.concat([df, scores], axis=1)
@@ -124,7 +175,7 @@ def generate_shortlist(
 
 
 def get_score_distribution(scores: pd.DataFrame) -> dict:
-    # cтатистика распределения скоров. 
+    # cтатистика распределения скоров 
     s = scores["score"]
     return {
         "mean": round(s.mean(), 1),

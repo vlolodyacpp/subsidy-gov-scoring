@@ -1,7 +1,6 @@
-# REST API для системы скоринга субсидий
-
 import logging
 from contextlib import asynccontextmanager
+from datetime import datetime
 
 import pandas as pd
 from fastapi import FastAPI, HTTPException, Query
@@ -9,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from src.pipeline import run_pipeline
 from src.features import build_feature_tables, extract_features, extract_features_batch
+from src.normatives import get_normative_for_type, build_normative_lookup
 from src.scoring import (
     score_single,
     score_batch,
@@ -41,11 +41,11 @@ async def lifespan(app: FastAPI):
     logger.info("Загрузка данных из %s ...", DATA_PATH)
     df = run_pipeline(DATA_PATH)
 
-    logger.info("Feature engineering ...")
+    logger.info("Feature engineering v2 ...")
     tables = build_feature_tables(df)
     features = extract_features_batch(df, tables)
 
-    logger.info("Batch скоринг ...")
+    logger.info("Batch скоринг v2 ...")
     scores = score_batch(features)
 
     # сохраняем в state
@@ -64,13 +64,14 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Subsidy Scoring API",
+    title="Subsidy Scoring API v2",
     description=(
         "AI-система ранжирования заявок на субсидирование "
         "сельхозпроизводителей Казахстана. "
+        "12 факторов на основе Правил субсидирования (Приказ МСХ РК №108). "
         "Рассчитывает score 0–100 и объясняет каждый результат."
     ),
-    version="0.2.0",
+    version="2.0.0",
     lifespan=lifespan,
 )
 
@@ -169,7 +170,7 @@ def _group_stats(column: str) -> list[dict]:
     ]
 
 
-# ── endpoints ─────────────────────────────────────────────────
+# endpoints 
 
 
 @app.get("/health", response_model=HealthResponse, tags=["Системные"])
@@ -182,14 +183,26 @@ async def health_check():
 
 @app.post("/score", response_model=ScoreResponse, tags=["Скоринг"])
 async def score_application(request: ScoreRequest):
+    # скоринг одной заявки, норматив подставляется из справочника автоматически
+    norm_lookup = app.state.tables["normative_lookup"]
+    ref_norm = get_normative_for_type(request.subsidy_type, norm_lookup)
+
+    # строим submit_date из месяца и дня
+    try:
+        submit_date = datetime(2025, request.submit_month, request.submit_day)
+    except ValueError:
+        submit_date = datetime(2025, request.submit_month, 15)
+
     row = pd.Series(
         {
             "region": request.region,
             "direction": request.direction,
             "subsidy_type": request.subsidy_type,
             "district": request.district,
+            "akimat": request.akimat,
             "amount": request.amount,
-            "normative": request.normative,
+            "normative": ref_norm or 0,
+            "submit_date": submit_date,
             "submit_month": request.submit_month,
         }
     )

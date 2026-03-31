@@ -1,32 +1,33 @@
 # pydantic-схемы для валидации запросов и ответов API
-
 from pydantic import BaseModel, Field
 from typing import Optional
 
 
-# ── модели запросов ───────────────────────────────────────────
+# модели запросов
 
 class ScoreRequest(BaseModel):
-    # запрос на скоринг одной заявки по сырым данным
+    # запрос на скоринг одной заявки, норматив берётся из справочника автоматически
     region: str = Field(..., description="Регион подачи заявки")
     direction: str = Field(..., description="Направление (скотоводство, овцеводство и т.д.)")
     subsidy_type: str = Field(..., description="Тип субсидии")
     district: str = Field("", description="Район")
+    akimat: str = Field("", description="Акимат")
     amount: float = Field(..., description="Запрашиваемая сумма субсидии (тенге)")
-    normative: float = Field(0, description="Норматив субсидирования (тенге)")
     submit_month: int = Field(6, ge=1, le=12, description="Месяц подачи заявки (1-12)")
+    submit_day: int = Field(15, ge=1, le=31, description="День подачи заявки (1-31)")
 
     model_config = {
         "json_schema_extra": {
             "examples": [
                 {
                     "region": "СКО",
-                    "direction": "Субсидирование в скотоводстве",
-                    "subsidy_type": "На возмещение части затрат на ведение селекционной и племенной работы",
+                    "direction": "Субсидирование в мясном и мясо-молочном скотоводстве",
+                    "subsidy_type": "Заявка на получение субсидий за приобретение племенных быков-производителей мясных и мясо-молочных пород",
                     "district": "г. Петропавловск",
-                    "amount": 400000,
-                    "normative": 5000,
+                    "akimat": "Акимат СКО",
+                    "amount": 780000,
                     "submit_month": 3,
+                    "submit_day": 15,
                 }
             ]
         }
@@ -44,7 +45,7 @@ class RankRequest(BaseModel):
     top_n: int = Field(50, ge=1, le=1000, description="Количество заявок в результате")
 
 
-# ── модели ответов ────────────────────────────────────────────
+# модели ответов
 
 class FactorDetail(BaseModel):
     # детали одного фактора скоринга
@@ -129,9 +130,9 @@ class StatsResponse(BaseModel):
 class HealthResponse(BaseModel):
     # проверка работоспособности
     status: str = "ok"
-    version: str = "0.2.0"
+    version: str = "2.0.0"
     records_loaded: int = 0
-    scoring_engine: str = "rule-based-v1"
+    scoring_engine: str = "rule-based-v2"
 
 
 class PaginatedApplications(BaseModel):
