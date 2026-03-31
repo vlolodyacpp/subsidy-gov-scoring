@@ -3,6 +3,8 @@ import pandas as pd
 from pathlib import Path
 from datetime import datetime
 
+from src.normatives import build_normative_lookup, get_normative_for_type
+
 
 def load_raw_data(path: str) -> pd.DataFrame:
     # загрузка xlsx
@@ -29,7 +31,8 @@ def load_raw_data(path: str) -> pd.DataFrame:
 
 
 def clean_data(df: pd.DataFrame) -> pd.DataFrame:
-    # очищаем датафрейм от пустот, парсим даты, типизируем
+    # уточнённая целевая переменная
+    # замена нормативов из датасета на эталонные из справочника
     df = df.dropna(subset=["app_number", "status", "region"])
 
     # парсинг даты
@@ -40,32 +43,49 @@ def clean_data(df: pd.DataFrame) -> pd.DataFrame:
     df["submit_quarter"] = df["submit_date"].dt.quarter
 
     # числовые колонки
-    df["normative"] = pd.to_numeric(df["normative"], errors="coerce").fillna(0)
+    df["normative_original"] = pd.to_numeric(df["normative"], errors="coerce").fillna(0)
     df["amount"] = pd.to_numeric(df["amount"], errors="coerce").fillna(0)
 
-    # упрощаем статусы до бинарного знчения для дальнейшей работы
-    approved = {"Исполнена", "Одобрена", "Сформировано поручение"}
-    df["is_approved"] = df["status"].isin(approved).astype(int)
-
     # категории
-    for col in ["region", "direction", "subsidy_type", "district", "status"]:
+    for col in ["region", "direction", "subsidy_type", "district", "status", "akimat"]:
         df[col] = df[col].astype(str).str.strip()
+
+    # замена нормативов
+    norm_lookup = build_normative_lookup()
+    df["normative"] = df["subsidy_type"].apply(
+        lambda st: get_normative_for_type(st, norm_lookup) or 0
+    )
+
+    # уточнение целевой переменной
+    # positive: заявка одобрена/исполнена
+    # negative: заявка отклонена
+    # exclude: заявка отозвана заявителем (не отказ комиссии)
+    positive_statuses = {"Исполнена", "Одобрена", "Сформировано поручение", "Получена"}
+    exclude_statuses = {"Отозвано"}
+
+    # удаляем отозванные заявки из выборки
+    n_before = len(df)
+    df = df[~df["status"].isin(exclude_statuses)].copy()
+    n_excluded = n_before - len(df)
+    print(f"  Исключено записей со статусом 'Отозвано': {n_excluded}")
+
+    # бинарная целевая переменная
+    df["is_approved"] = df["status"].isin(positive_statuses).astype(int)
 
     return df.reset_index(drop=True)
 
 
 def run_pipeline(path: str) -> pd.DataFrame:
-    #запускаем пайплайн
     raw = load_raw_data(path)
     clean = clean_data(raw)
-    print(f"Pipeline complete: {len(clean)} records, "
+    print(f"Pipeline v2 complete: {len(clean)} records, "
           f"{clean['is_approved'].sum()} approved, "
-          f"{(~clean['is_approved'].astype(bool)).sum()} rejected/other")
+          f"{(~clean['is_approved'].astype(bool)).sum()} rejected")
     return clean
 
 
 if __name__ == "__main__":
-    DATA_PATH = "data/Выгрузка_по_выданным_субсидиям_2025_год_обезлич.xlsx"
+    DATA_PATH = "data/subsidies.xlsx"
     df = run_pipeline(DATA_PATH)
     print(df.info())
     print(df.head())
