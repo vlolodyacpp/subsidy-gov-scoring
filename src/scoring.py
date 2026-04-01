@@ -11,9 +11,8 @@ WEIGHTS = {
     "amount_adequacy":              0.08,
 
     # группа 2: сроки и бюджет (30%)
-    "deadline_compliance":          0.08,
-    "budget_pressure":              0.12,
-    "queue_position":               0.10,
+    "budget_pressure":              0.16,
+    "queue_position":               0.14,
 
     # группа 3: региональная специфика (29%)
     "region_specialization":        0.10,
@@ -30,7 +29,6 @@ FACTOR_LABELS = {
     "normative_match":              "Соответствие норматива эталону",
     "amount_normative_integrity":   "Арифметическая корректность суммы",
     "amount_adequacy":              "Адекватность суммы заявки",
-    "deadline_compliance":          "Соблюдение срока подачи",
     "budget_pressure":              "Бюджетное давление",
     "queue_position":               "Позиция в очереди подачи",
     "region_specialization":        "Профильность направления для региона",
@@ -44,7 +42,7 @@ FACTOR_LABELS = {
 # группировка факторов для объяснений
 FACTOR_GROUPS = {
     "Нормативное соответствие": ["normative_match", "amount_normative_integrity", "amount_adequacy"],
-    "Сроки и бюджет": ["deadline_compliance", "budget_pressure", "queue_position"],
+    "Сроки и бюджет": ["budget_pressure", "queue_position"],
     "Региональная специфика": ["region_specialization", "region_direction_approval_rate", "akimat_approval_rate"],
     "Характеристики заявки": ["unit_count", "direction_approval_rate", "subsidy_type_approval_rate"],
 }

@@ -1,4 +1,4 @@
-"""запуск полного пайплайна скоринга.(временное решение на первичном этапе)"""
+# entry point: python main.py (CLI) или python main.py --serve (FastAPI)
 import sys
 import argparse
 from pathlib import Path
@@ -6,10 +6,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 DATA_PATH = "data/subsidies.xlsx"
-
-from src.pipeline import run_pipeline
-from src.features import build_feature_tables, extract_features_batch
-from src.scoring import score_batch, generate_shortlist, get_score_distribution, score_single
 
 
 def run_cli(data_path: str):

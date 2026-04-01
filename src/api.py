@@ -121,6 +121,7 @@ def _make_app_brief(row: pd.Series) -> ApplicationBrief:
         direction=str(row.get("direction", "")),
         subsidy_type=str(row.get("subsidy_type", "")),
         amount=float(row.get("amount", 0)),
+        status=str(row.get("status", "")),
         score=float(row.get("score", 0)),
         risk_level=str(row.get("risk_level", "")),
         top_factor=str(row.get("top_factor_label", "")),
@@ -249,8 +250,15 @@ async def explain_score(app_id: str):
         raise HTTPException(status_code=404, detail=f"Заявка {app_id} не найдена")
 
     row = match.iloc[0]
-    features_dict = extract_features(row, app.state.tables)
+    idx = match.index[0]
+
+    # используем предрассчитанные batch-фичи для консистентности с шортлистом
+    features_dict = app.state.features.loc[idx].to_dict()
     result = score_single(features_dict)
+
+    # нормативы: из заявки и эталонный
+    norm_lookup = app.state.tables["normative_lookup"]
+    ref_norm = get_normative_for_type(str(row["subsidy_type"]), norm_lookup)
 
     return ExplainResponse(
         app_number=str(row["app_number"]),
@@ -259,6 +267,8 @@ async def explain_score(app_id: str):
         subsidy_type=str(row["subsidy_type"]),
         amount=float(row["amount"]),
         status=str(row["status"]),
+        normative=float(row["normative"]) if pd.notna(row.get("normative")) else None,
+        ref_normative=float(ref_norm) if ref_norm else None,
         score=result.score,
         risk_level=result.risk_level,
         factors=_build_factor_details(features_dict, result),
@@ -270,12 +280,15 @@ async def explain_score(app_id: str):
 async def get_stats(
     region: str | None = Query(None, description="Фильтр по региону"),
     direction: str | None = Query(None, description="Фильтр по направлению"),
+    subsidy_type: str | None = Query(None, description="Фильтр по типу субсидии"),
+    risk_level: str | None = Query(None, description="Фильтр по уровню риска"),
     min_score: float | None = Query(None, ge=0, le=100, description="Минимальный балл"),
     max_score: float | None = Query(None, ge=0, le=100, description="Максимальный балл"),
 ):
     combined = _get_combined()
     filtered = _apply_filters(
         combined, region=region, direction=direction,
+        subsidy_type=subsidy_type, risk_level=risk_level,
         min_score=min_score, max_score=max_score,
     )
     filtered_scores = app.state.scores.loc[filtered.index]
@@ -358,6 +371,112 @@ async def get_application(app_id: str):
     idx = match.index[0]
     combined = _get_combined()
     return _make_app_brief(combined.loc[idx])
+
+
+@app.get("/factor-stats", tags=["Аналитика"])
+async def get_factor_stats(
+    region: str | None = Query(None),
+    direction: str | None = Query(None),
+    subsidy_type: str | None = Query(None),
+    min_score: float | None = Query(None, ge=0, le=100),
+    max_score: float | None = Query(None, ge=0, le=100),
+):
+    """Средние значения каждого фактора (для графиков распределения)."""
+    combined = _get_combined()
+    filtered = _apply_filters(
+        combined, region=region, direction=direction,
+        subsidy_type=subsidy_type,
+        min_score=min_score, max_score=max_score,
+    )
+    features = app.state.features.loc[filtered.index]
+
+    result = {}
+    for factor in FACTOR_LABELS:
+        if factor in features.columns:
+            col = features[factor]
+            std_val = col.std()
+            result[factor] = {
+                "label": FACTOR_LABELS[factor],
+                "mean": round(float(col.mean()), 4),
+                "median": round(float(col.median()), 4),
+                "std": round(float(std_val), 4) if pd.notna(std_val) else 0.0,
+                "min": round(float(col.min()), 4),
+                "max": round(float(col.max()), 4),
+                "values": col.round(3).tolist(),
+            }
+    return result
+
+
+@app.get("/region-factors", tags=["Аналитика"])
+async def get_region_factors(
+    direction: str | None = Query(None),
+    subsidy_type: str | None = Query(None),
+):
+    """Средние значения факторов в разрезе регионов."""
+    combined = _get_combined()
+    filtered = _apply_filters(combined, direction=direction, subsidy_type=subsidy_type)
+    features = app.state.features.loc[filtered.index]
+
+    # добавляем регион к features
+    feat_with_region = features.copy()
+    feat_with_region["region"] = filtered["region"]
+
+    factor_cols = [c for c in FACTOR_LABELS if c in features.columns]
+    grouped = feat_with_region.groupby("region")[factor_cols].mean()
+
+    result = []
+    for region, row in grouped.iterrows():
+        factors = {}
+        for col in factor_cols:
+            factors[col] = {
+                "label": FACTOR_LABELS[col],
+                "mean": round(float(row[col]), 4),
+            }
+        result.append({
+            "region": region,
+            "count": int((filtered["region"] == region).sum()),
+            "factors": factors,
+        })
+
+    return sorted(result, key=lambda x: x["count"], reverse=True)
+
+
+@app.get("/timeline", tags=["Аналитика"])
+async def get_timeline(
+    region: str | None = Query(None),
+    direction: str | None = Query(None),
+):
+    """Динамика бюджетного давления и очереди по месяцам."""
+    combined = _get_combined()
+    filtered = _apply_filters(combined, region=region, direction=direction)
+    features = app.state.features.loc[filtered.index]
+
+    df_timeline = pd.DataFrame({
+        "submit_month": filtered["submit_month"],
+        "budget_pressure": features["budget_pressure"] if "budget_pressure" in features.columns else 0,
+        "queue_position": features["queue_position"] if "queue_position" in features.columns else 0,
+        "score": filtered["score"],
+    })
+
+    monthly = df_timeline.groupby("submit_month").agg(
+        count=("score", "size"),
+        avg_score=("score", "mean"),
+        avg_budget_pressure=("budget_pressure", "mean"),
+        avg_queue_position=("queue_position", "mean"),
+    ).reset_index()
+
+    monthly = monthly.sort_values("submit_month")
+
+    return [
+        {
+            "month": int(row["submit_month"]),
+            "count": int(row["count"]),
+            "avg_score": round(float(row["avg_score"]), 1),
+            "avg_budget_pressure": round(float(row["avg_budget_pressure"]), 4),
+            "avg_queue_position": round(float(row["avg_queue_position"]), 4),
+        }
+        for _, row in monthly.iterrows()
+    ]
 
 
 @app.get("/regions", tags=["Справочники"])
