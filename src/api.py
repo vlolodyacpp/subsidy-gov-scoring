@@ -270,12 +270,14 @@ async def explain_score(app_id: str):
 async def get_stats(
     region: str | None = Query(None, description="Фильтр по региону"),
     direction: str | None = Query(None, description="Фильтр по направлению"),
+    subsidy_type: str | None = Query(None, description="Фильтр по типу субсидии"),
     min_score: float | None = Query(None, ge=0, le=100, description="Минимальный балл"),
     max_score: float | None = Query(None, ge=0, le=100, description="Максимальный балл"),
 ):
     combined = _get_combined()
     filtered = _apply_filters(
         combined, region=region, direction=direction,
+        subsidy_type=subsidy_type,
         min_score=min_score, max_score=max_score,
     )
     filtered_scores = app.state.scores.loc[filtered.index]

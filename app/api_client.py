@@ -38,6 +38,7 @@ def get_directions() -> list[dict]:
 def get_stats(
     region: str | None = None,
     direction: str | None = None,
+    subsidy_type: str | None = None,
     min_score: float | None = None,
     max_score: float | None = None,
 ) -> dict:
@@ -46,6 +47,8 @@ def get_stats(
         params["region"] = region
     if direction:
         params["direction"] = direction
+    if subsidy_type:
+        params["subsidy_type"] = subsidy_type
     if min_score is not None:
         params["min_score"] = min_score
     if max_score is not None:
