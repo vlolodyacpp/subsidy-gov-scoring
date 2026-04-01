@@ -13,16 +13,45 @@ def render_comparison(app_numbers: list[str]):
 
     col1, col2 = st.columns(2)
     with col1:
-        app_a = st.selectbox("Заявка A", app_numbers, index=0, key="cmp_a")
+        mode_a = st.radio("Способ выбора A", ["Из списка", "По номеру"], horizontal=True, key="mode_a")
+        if mode_a == "Из списка":
+            app_a = st.selectbox("Заявка A", app_numbers, index=0, key="cmp_a")
+        else:
+            app_a = st.text_input("Номер заявки A", key="cmp_a_input").strip()
     with col2:
-        app_b = st.selectbox("Заявка B", app_numbers, index=1, key="cmp_b")
+        mode_b = st.radio("Способ выбора B", ["Из списка", "По номеру"], horizontal=True, key="mode_b")
+        if mode_b == "Из списка":
+            app_b = st.selectbox("Заявка B", app_numbers, index=min(1, len(app_numbers) - 1), key="cmp_b")
+        else:
+            app_b = st.text_input("Номер заявки B", key="cmp_b_input").strip()
+
+    if not app_a or not app_b:
+        st.info("Введите номера обеих заявок.")
+        return
 
     if app_a == app_b:
         st.info("Выберите две разные заявки для сравнения.")
         return
 
-    detail_a = get_explanation(app_a)
-    detail_b = get_explanation(app_b)
+    try:
+        detail_a = get_explanation(app_a)
+    except Exception:
+        st.error(f"Заявка **{app_a}** не найдена.")
+        return
+    try:
+        detail_b = get_explanation(app_b)
+    except Exception:
+        st.error(f"Заявка **{app_b}** не найдена.")
+        return
+
+    # краткая инфо
+    col_info_a, col_info_b = st.columns(2)
+    with col_info_a:
+        st.metric("Score A", f"{detail_a['score']:.1f}", help=detail_a.get("risk_level", ""))
+        st.caption(f"{detail_a.get('region', '')} · {detail_a.get('direction', '')}")
+    with col_info_b:
+        st.metric("Score B", f"{detail_b['score']:.1f}", help=detail_b.get("risk_level", ""))
+        st.caption(f"{detail_b.get('region', '')} · {detail_b.get('direction', '')}")
 
     factors_a = {f["name"]: f for f in detail_a.get("factors", [])}
     factors_b = {f["name"]: f for f in detail_b.get("factors", [])}
@@ -61,7 +90,7 @@ def render_comparison(app_numbers: list[str]):
         legend=dict(orientation="h", yanchor="bottom", y=-0.15, xanchor="center", x=0.5),
         **PLOTLY_LAYOUT,
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
 
     # таблица сравнения
     comparison_data = []
@@ -80,7 +109,7 @@ def render_comparison(app_numbers: list[str]):
             f"B ({app_b})": f"{val_b:.1f}",
             "Разница (A-B)": f"{diff:+.1f}",
         })
-    st.dataframe(pd.DataFrame(comparison_data), hide_index=True, use_container_width=True)
+    st.dataframe(pd.DataFrame(comparison_data), hide_index=True, width="stretch")
 
 
 st.set_page_config(page_title="Сравнение", page_icon="⚖️", layout="wide")
@@ -90,5 +119,5 @@ result = page_setup("Сравнение")
 if result:
     filters, stats, rank_data = result
     applications = rank_data["applications"]
-    app_numbers = [a["app_number"] for a in applications[:50]]
+    app_numbers = [a["app_number"] for a in applications[:200]]
     render_comparison(app_numbers)

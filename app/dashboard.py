@@ -5,26 +5,32 @@ import pandas as pd
 
 from shared import (
     RISK_COLORS,
+    WEIGHTS,
     PLOTLY_LAYOUT,
     page_setup,
 )
+from api_client import get_factor_stats
+
+
+def _fmt(val, fmt=".1f"):
+    return f"{val:{fmt}}" if val is not None else "—"
 
 
 def render_metrics(stats: dict):
     st.markdown('<p class="section-header">📊 Ключевые метрики</p>', unsafe_allow_html=True)
 
     col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Средний балл", f"{stats['mean_score']:.1f}")
-    col2.metric("Медиана", f"{stats['median_score']:.1f}")
-    col3.metric("Всего заявок", f"{stats['total_records']:,}")
+    col1.metric("Средний балл", _fmt(stats.get("mean_score")))
+    col2.metric("Медиана", _fmt(stats.get("median_score")))
+    col3.metric("Всего заявок", f"{stats.get('total_records', 0):,}")
 
-    high_risk = stats["risk_distribution"].get("Высокий", 0)
+    high_risk = stats.get("risk_distribution", {}).get("Высокий", 0)
     col4.metric("Высокий риск", f"{high_risk:,}")
 
     col5, col6, col7 = st.columns(3)
-    col5.metric("Ст. отклонение", f"{stats['std_score']:.1f}")
-    col6.metric("Минимум", f"{stats['min_score']:.1f}")
-    col7.metric("Максимум", f"{stats['max_score']:.1f}")
+    col5.metric("Ст. отклонение", _fmt(stats.get("std_score")))
+    col6.metric("Минимум", _fmt(stats.get("min_score")))
+    col7.metric("Максимум", _fmt(stats.get("max_score")))
 
 
 def render_risk_donut(stats: dict):
@@ -114,6 +120,68 @@ def render_charts(applications: list[dict]):
     st.plotly_chart(fig, width="stretch")
 
 
+def render_factor_distributions(filters: dict):
+    """Средние значения каждого фактора — bar chart."""
+    st.markdown('<p class="section-header">📊 Средние значения факторов</p>', unsafe_allow_html=True)
+
+    factor_data = get_factor_stats(
+        region=filters.get("region"),
+        direction=filters.get("direction"),
+        subsidy_type=filters.get("subsidy_type"),
+        min_score=filters.get("min_score"),
+        max_score=filters.get("max_score"),
+    )
+
+    if not factor_data:
+        st.info("Нет данных.")
+        return
+
+    rows = []
+    for name, data in factor_data.items():
+        weight = WEIGHTS.get(name, 0)
+        rows.append({
+            "factor": data["label"],
+            "mean": data["mean"],
+            "weight": weight,
+            "weighted_contrib": round(data["mean"] * weight * 100, 1),
+            "max_contrib": round(weight * 100, 1),
+        })
+
+    df = pd.DataFrame(rows).sort_values("weighted_contrib", ascending=True)
+
+    fig = go.Figure()
+
+    fig.add_trace(go.Bar(
+        y=df["factor"],
+        x=df["max_contrib"],
+        orientation="h",
+        name="Макс. возможный",
+        marker_color="rgba(100, 100, 140, 0.3)",
+        hovertemplate="%{y}: макс. %{x:.1f}<extra></extra>",
+    ))
+
+    fig.add_trace(go.Bar(
+        y=df["factor"],
+        x=df["weighted_contrib"],
+        orientation="h",
+        name="Средний вклад",
+        marker_color="#4cc9f0",
+        customdata=df["mean"].values,
+        hovertemplate="%{y}: %{x:.1f} баллов (среднее значение: %{customdata:.2f})<extra></extra>",
+    ))
+
+    fig.update_layout(
+        barmode="overlay",
+        height=420,
+        margin=dict(l=0, r=20, t=10, b=30),
+        yaxis_title="",
+        showlegend=True,
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        **PLOTLY_LAYOUT,
+    )
+    st.plotly_chart(fig, width="stretch")
+
+
 def main():
     st.set_page_config(
         page_title="Subsidy Scoring",
@@ -124,10 +192,10 @@ def main():
 
     st.markdown('<p class="main-title">🏛️ Subsidy Scoring System</p>', unsafe_allow_html=True)
 
-    result = page_setup("Обзор")
+    result = page_setup("Главная")
     if not result:
         return
-    _filters, stats, rank_data = result
+    filters, stats, rank_data = result
     applications = rank_data["applications"]
 
     st.markdown(
@@ -144,6 +212,7 @@ def main():
         render_top_regions(stats)
 
     render_charts(applications)
+    render_factor_distributions(filters)
 
 
 if __name__ == "__main__":

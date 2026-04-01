@@ -84,6 +84,9 @@ def render_sidebar() -> dict:
     stype_names = ["Все"] + st.session_state.get("subsidy_types", [])
     selected_stype = st.sidebar.selectbox("Тип субсидии", stype_names)
 
+    risk_names = ["Все", "Низкий", "Средний", "Высокий"]
+    selected_risk = st.sidebar.selectbox("Уровень риска", risk_names)
+
     score_min, score_max = st.sidebar.slider(
         "Диапазон баллов",
         min_value=0.0,
@@ -96,6 +99,7 @@ def render_sidebar() -> dict:
         "region": selected_region if selected_region != "Все" else None,
         "direction": selected_direction if selected_direction != "Все" else None,
         "subsidy_type": selected_stype if selected_stype != "Все" else None,
+        "risk_level": selected_risk if selected_risk != "Все" else None,
         "min_score": score_min if score_min > 0 else None,
         "max_score": score_max if score_max < 100 else None,
     }

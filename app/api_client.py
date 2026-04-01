@@ -39,6 +39,7 @@ def get_stats(
     region: str | None = None,
     direction: str | None = None,
     subsidy_type: str | None = None,
+    risk_level: str | None = None,
     min_score: float | None = None,
     max_score: float | None = None,
 ) -> dict:
@@ -49,6 +50,8 @@ def get_stats(
         params["direction"] = direction
     if subsidy_type:
         params["subsidy_type"] = subsidy_type
+    if risk_level:
+        params["risk_level"] = risk_level
     if min_score is not None:
         params["min_score"] = min_score
     if max_score is not None:
@@ -84,13 +87,61 @@ def rank_applications(
     return _post("/rank", body)
 
 
-# детали заявки 
+# детали заявки
 
 def get_explanation(app_id: str) -> dict:
     return _get(f"/explain/{app_id}")
 
 
-# проверка доступности API 
+@st.cache_data(ttl=60)
+def get_factor_stats(
+    region: str | None = None,
+    direction: str | None = None,
+    subsidy_type: str | None = None,
+    min_score: float | None = None,
+    max_score: float | None = None,
+) -> dict:
+    params = {}
+    if region:
+        params["region"] = region
+    if direction:
+        params["direction"] = direction
+    if subsidy_type:
+        params["subsidy_type"] = subsidy_type
+    if min_score is not None:
+        params["min_score"] = min_score
+    if max_score is not None:
+        params["max_score"] = max_score
+    return _get("/factor-stats", params=params)
+
+
+@st.cache_data(ttl=60)
+def get_region_factors(
+    direction: str | None = None,
+    subsidy_type: str | None = None,
+) -> list[dict]:
+    params = {}
+    if direction:
+        params["direction"] = direction
+    if subsidy_type:
+        params["subsidy_type"] = subsidy_type
+    return _get("/region-factors", params=params)
+
+
+@st.cache_data(ttl=60)
+def get_timeline(
+    region: str | None = None,
+    direction: str | None = None,
+) -> list[dict]:
+    params = {}
+    if region:
+        params["region"] = region
+    if direction:
+        params["direction"] = direction
+    return _get("/timeline", params=params)
+
+
+# проверка доступности API
 
 def check_health() -> dict | None:
     try:
