@@ -59,6 +59,7 @@ def get_stats(
 def rank_applications(
     region: str | None = None,
     direction: str | None = None,
+    subsidy_type: str | None = None,
     min_score: float | None = None,
     max_score: float | None = None,
     risk_level: str | None = None,
@@ -69,6 +70,8 @@ def rank_applications(
         body["region"] = region
     if direction:
         body["direction"] = direction
+    if subsidy_type:
+        body["subsidy_type"] = subsidy_type
     if min_score is not None:
         body["min_score"] = min_score
     if max_score is not None:

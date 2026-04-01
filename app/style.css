@@ -185,3 +185,11 @@ header[data-testid="stHeader"] {
     color: #d0d0e0;
     font-weight: 600;
 }
+
+.explanation-header {
+    font-size: 1.3rem !important;
+    font-weight: 600 !important;
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+    color: #d0d0e0;
+}
