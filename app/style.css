@@ -1,7 +1,7 @@
 /* общие стили страницы */
 .block-container {
     padding-top: 1rem;
-    padding-bottom: 1rem;
+    padding-bottom: 4rem;
 }
 
 
@@ -25,6 +25,11 @@ header[data-testid="stHeader"] {
 }
 
 
+
+/* навигация страниц в сайдбаре */
+[data-testid="stSidebarNav"] a span {
+    font-size: 1.1rem !important;
+}
 
 /* sidebar */
 [data-testid="stSidebar"] {
@@ -71,7 +76,7 @@ header[data-testid="stHeader"] {
 }
 
 [data-testid="stMetric"] label {
-    font-size: 0.85rem;
+    font-size: 0.95rem;
     color: #8888aa;
 }
 
@@ -114,7 +119,7 @@ header[data-testid="stHeader"] {
 }
 
 .detail-score-label {
-    font-size: 0.85rem;
+    font-size: 0.95rem;
     color: #8888aa;
     text-transform: uppercase;
     letter-spacing: 1px;
@@ -186,17 +191,68 @@ header[data-testid="stHeader"] {
     font-weight: 600;
 }
 
-.app-info-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.6rem 2rem;
-    color: #8888aa;
-    font-size: 1.0rem;
+/* detail header: score + info side by side */
+.detail-header {
+    display: flex;
+    gap: 1.2rem;
+    margin-bottom: 1rem;
+    align-items: stretch;
 }
 
-.app-info-grid span {
-    color: #d0d0e0;
+.detail-score-block {
+    background: #1a1a2e;
+    border: 1px solid #3a3a5a;
+    border-radius: 12px;
+    padding: 1.5rem;
+    min-width: 140px;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.detail-info-block {
+    background: #1a1a2e;
+    border: 1px solid #3a3a5a;
+    border-radius: 12px;
+    padding: 1rem 1.5rem;
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.detail-info-row {
+    display: flex;
+    gap: 2rem;
+}
+
+.detail-info-item {
+    flex-shrink: 0;
+}
+
+.detail-info-item.wide {
+    flex: 1;
+    min-width: 0;
+}
+
+.detail-info-label {
+    display: block;
+    font-size: 0.88rem;
+    color: #6a6a80;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 2px;
+}
+
+.detail-info-value {
+    display: block;
+    font-size: 1.05rem;
     font-weight: 600;
+    color: #d0d0e0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .explanation-header {
@@ -259,7 +315,7 @@ header[data-testid="stHeader"] {
 .group-card-bar-fill.low { background: #e63946; }
 
 .group-card-level {
-    font-size: 0.85rem;
+    font-size: 0.95rem;
     color: #8888aa;
     margin-bottom: 0.2rem;
 }
@@ -282,12 +338,12 @@ header[data-testid="stHeader"] {
 }
 
 .factor-row-label {
-    font-size: 0.9rem;
+    font-size: 1.0rem;
     color: #b0b0c8;
 }
 
 .factor-row-value {
-    font-size: 0.95rem;
+    font-size: 1.05rem;
     font-weight: 600;
     color: #d0d0e0;
 }
@@ -295,7 +351,7 @@ header[data-testid="stHeader"] {
 .factor-row-max {
     font-weight: 400;
     color: #6a6a80;
-    font-size: 0.85rem;
+    font-size: 0.95rem;
 }
 
 .factor-row-bar-bg {

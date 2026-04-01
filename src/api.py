@@ -250,7 +250,10 @@ async def explain_score(app_id: str):
         raise HTTPException(status_code=404, detail=f"Заявка {app_id} не найдена")
 
     row = match.iloc[0]
-    features_dict = extract_features(row, app.state.tables)
+    idx = match.index[0]
+
+    # используем предрассчитанные batch-фичи для консистентности с шортлистом
+    features_dict = app.state.features.loc[idx].to_dict()
     result = score_single(features_dict)
 
     # нормативы: из заявки и эталонный
@@ -391,11 +394,12 @@ async def get_factor_stats(
     for factor in FACTOR_LABELS:
         if factor in features.columns:
             col = features[factor]
+            std_val = col.std()
             result[factor] = {
                 "label": FACTOR_LABELS[factor],
                 "mean": round(float(col.mean()), 4),
                 "median": round(float(col.median()), 4),
-                "std": round(float(col.std()), 4),
+                "std": round(float(std_val), 4) if pd.notna(std_val) else 0.0,
                 "min": round(float(col.min()), 4),
                 "max": round(float(col.max()), 4),
                 "values": col.round(3).tolist(),

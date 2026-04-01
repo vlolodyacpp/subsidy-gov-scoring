@@ -11,7 +11,6 @@ FACTOR_SHORT = {
     "normative_match": "Норматив",
     "amount_normative_integrity": "Корректность суммы",
     "amount_adequacy": "Адекватность суммы",
-    "deadline_compliance": "Срок подачи",
     "budget_pressure": "Бюджет",
     "queue_position": "Очередь",
     "region_specialization": "Специализация",

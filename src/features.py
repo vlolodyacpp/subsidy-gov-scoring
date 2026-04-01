@@ -4,7 +4,6 @@ import numpy as np
 from src.normatives import (
     build_normative_lookup,
     get_normative_for_type,
-    check_deadline_compliance,
 )
 
 
@@ -214,10 +213,6 @@ def extract_features(row: pd.Series, tables: dict) -> dict:
 
     # группа 2: сроки и бюджет
 
-    # deadline_compliance
-    submit_date = row.get("submit_date", None)
-    deadline_compliance = check_deadline_compliance(submit_date)
-
     # budget_pressure — оценка на основе batch-контекста
     approved_totals = tables.get("approved_totals", {})
     total_requested = tables.get("total_requested", {})
@@ -278,7 +273,6 @@ def extract_features(row: pd.Series, tables: dict) -> dict:
         "normative_match": normative_match,
         "amount_normative_integrity": amount_integrity,
         "amount_adequacy": amount_adequacy,
-        "deadline_compliance": deadline_compliance,
         "budget_pressure": budget_pressure,
         "queue_position": queue_position,
         "region_specialization": region_spec,
@@ -353,9 +347,6 @@ def extract_features_batch(df: pd.DataFrame, tables: dict) -> pd.DataFrame:
         "_unit_count_raw"
     ].rank(pct=True).fillna(0.5)
     features.drop(columns=["_unit_count_raw"], inplace=True)
-
-    # deadline_compliance
-    features["deadline_compliance"] = df["submit_date"].apply(check_deadline_compliance)
 
     # budget_pressure
     features["budget_pressure"] = compute_budget_pressure(df)

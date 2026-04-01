@@ -13,7 +13,7 @@ from api_client import get_explanation
 
 FACTOR_GROUPS = {
     "Нормативное соответствие": ["normative_match", "amount_normative_integrity", "amount_adequacy"],
-    "Сроки и бюджет": ["deadline_compliance", "budget_pressure", "queue_position"],
+    "Сроки и бюджет": ["budget_pressure", "queue_position"],
     "Региональная специфика": ["region_specialization", "region_direction_approval_rate", "akimat_approval_rate"],
     "Характеристики заявки": ["unit_count", "direction_approval_rate", "subsidy_type_approval_rate"],
 }
@@ -32,29 +32,43 @@ def render_details(detail: dict):
     }.get(detail["risk_level"].lower(), "risk-medium")
 
     # --- карточка скора + информация о заявке ---
-    col_score, col_info = st.columns([1, 3])
-
-    with col_score:
-        st.markdown(f"""
-        <div class="detail-card">
+    st.markdown(f"""
+    <div class="detail-header">
+        <div class="detail-score-block">
             <p class="detail-score-label">Score</p>
             <p class="detail-score">{detail['score']}</p>
             <span class="risk-badge {risk_class}">{detail['risk_level']} риск</span>
         </div>
-        """, unsafe_allow_html=True)
-
-    with col_info:
-        st.markdown(f"""
-        <div class="detail-card">
-            <div class="app-info-grid">
-                <div>Регион: <span>{detail.get("region", "—")}</span></div>
-                <div>Направление: <span>{detail.get("direction", "—")}</span></div>
-                <div>Тип: <span>{detail.get("subsidy_type", "—")}</span></div>
-                <div>Сумма: <span>{detail.get("amount", 0):,.0f} ₸</span></div>
-                <div>Статус: <span>{detail.get("status", "—")}</span></div>
+        <div class="detail-info-block">
+            <div class="detail-info-row">
+                <div class="detail-info-item">
+                    <span class="detail-info-label">Регион</span>
+                    <span class="detail-info-value">{detail.get("region", "—")}</span>
+                </div>
+                <div class="detail-info-item">
+                    <span class="detail-info-label">Сумма</span>
+                    <span class="detail-info-value">{detail.get("amount", 0):,.0f} ₸</span>
+                </div>
+                <div class="detail-info-item">
+                    <span class="detail-info-label">Статус</span>
+                    <span class="detail-info-value">{detail.get("status", "—")}</span>
+                </div>
+            </div>
+            <div class="detail-info-row">
+                <div class="detail-info-item wide">
+                    <span class="detail-info-label">Направление</span>
+                    <span class="detail-info-value">{detail.get("direction", "—")}</span>
+                </div>
+            </div>
+            <div class="detail-info-row">
+                <div class="detail-info-item wide">
+                    <span class="detail-info-label">Тип субсидии</span>
+                    <span class="detail-info-value">{detail.get("subsidy_type", "—")}</span>
+                </div>
             </div>
         </div>
-        """, unsafe_allow_html=True)
+    </div>
+    """, unsafe_allow_html=True)
 
     # --- норматив: заявленный vs эталонный ---
     ref_norm = detail.get("ref_normative")
