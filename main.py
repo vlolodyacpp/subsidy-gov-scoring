@@ -1,4 +1,4 @@
-"""запуск полного пайплайна скоринга.(временное решение на первичном этапе)"""
+"""CLI и API для merit scoring с dual-branch ML и отдельным historical advisory-слоем."""
 import sys
 import argparse
 from pathlib import Path
@@ -13,7 +13,7 @@ from src.scoring import score_batch, generate_shortlist, get_score_distribution,
 
 
 def run_cli(data_path: str):
-    """Запуск CLI-пайплайна скоринга v2."""
+    """Запуск диагностического CLI-пайплайна rule-based скоринга."""
     from src.pipeline import run_pipeline
     from src.features import build_feature_tables, extract_features_batch
     from src.scoring import (
@@ -22,7 +22,7 @@ def run_cli(data_path: str):
     )
 
     print("=" * 60)
-    print("SUBSIDY SCORING SYSTEM v2.0 (12 факторов)")
+    print("SUBSIDY SCORING SYSTEM v3.2 (rule diagnostics + dual-branch merit ML)")
     print("=" * 60)
 
     # 1. загрузка и очистка
@@ -38,7 +38,7 @@ def run_cli(data_path: str):
     print(f"  Метрики: {list(features.columns)}")
 
     # 3. скоринг
-    print("\n[3/4] Скоринг заявок (12 факторов)...")
+    print("\n[3/4] Скоринг допустимых заявок (11 факторов + deadline prefilter)...")
     scores = score_batch(features)
     stats = get_score_distribution(scores)
     print(f"  Средний балл: {stats['mean']}")
@@ -75,16 +75,17 @@ def run_server(host: str = "0.0.0.0", port: int = 8000):
     import uvicorn
 
     print("=" * 60)
-    print("SUBSIDY SCORING API v2.0 (12 факторов)")
+    print("SUBSIDY SCORING API v3.2 (dual-branch merit ML + historical advisory)")
     print(f"Запуск на http://{host}:{port}")
     print(f"Swagger UI: http://{host}:{port}/docs")
+    print("ML bundle path: models/artifacts/subsidy_model.joblib")
     print("=" * 60)
 
     uvicorn.run("src.api:app", host=host, port=port, reload=False)
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Subsidy Scoring System v2")
+    parser = argparse.ArgumentParser(description="Subsidy Scoring System v3.2")
     parser.add_argument(
         "--serve",
         action="store_true",

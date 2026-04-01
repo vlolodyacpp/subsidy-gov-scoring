@@ -60,6 +60,23 @@ class ScoreResponse(BaseModel):
     # результат скоринга одной заявки
     score: float = Field(..., description="Итоговый балл 0-100")
     risk_level: str = Field(..., description="Уровень риска")
+    rule_score: Optional[float] = Field(None, description="Rule-based score")
+    ml_score: Optional[float] = Field(None, description="ML score 0-100")
+    ml_probability: Optional[float] = Field(None, description="Оценка итоговой силы заявки по dual-branch ML")
+    history_match_source: str = Field("global", description="Какой исторический срез использован для advisory")
+    history_match_count: int = Field(0, description="Сколько похожих исторических заявок найдено")
+    history_approval_rate: Optional[float] = Field(None, description="Историческая одобряемость похожих заявок")
+    history_advisory_score: Optional[float] = Field(None, description="Исторический advisory score 0-100")
+    history_recommendation: Optional[str] = Field(None, description="Текстовая историческая рекомендация")
+    history_note: Optional[str] = Field(None, description="Пояснение по historical advisory")
+    disqualified: bool = Field(False, description="Флаг мгновенной дисквалификации")
+    disqualification_reason: Optional[str] = Field(None, description="Причина дисквалификации")
+    eligibility_status: str = Field("preliminarily_eligible", description="Статус eligibility-проверки")
+    manual_review_required: bool = Field(True, description="Нужна ли ручная проверка критериев приложения 2")
+    eligibility_note: Optional[str] = Field(None, description="Пояснение по предварительной eligibility-проверке")
+    normative_reference_found: bool = Field(True, description="Найден ли эталонный норматив в локальном справочнике")
+    scoring_engine: str = Field("merit-ml-advisory-v3.2", description="Использованный движок скоринга")
+    model_name: Optional[str] = Field(None, description="Имя загруженной ML-модели")
     factors: list[FactorDetail] = Field(..., description="Детализация факторов")
     explanation: list[str] = Field(..., description="Текстовые объяснения")
 
@@ -74,6 +91,23 @@ class ApplicationBrief(BaseModel):
     amount: float
     score: float
     risk_level: str
+    rule_score: Optional[float] = None
+    ml_score: Optional[float] = None
+    ml_probability: Optional[float] = None
+    history_match_source: str = "global"
+    history_match_count: int = 0
+    history_approval_rate: Optional[float] = None
+    history_advisory_score: Optional[float] = None
+    history_recommendation: Optional[str] = None
+    history_note: Optional[str] = None
+    disqualified: bool = False
+    disqualification_reason: Optional[str] = None
+    eligibility_status: str = "preliminarily_eligible"
+    manual_review_required: bool = True
+    eligibility_note: Optional[str] = None
+    normative_reference_found: bool = True
+    scoring_engine: str = "merit-ml-advisory-v3.2"
+    model_name: Optional[str] = None
     top_factor: str
 
 
@@ -81,6 +115,8 @@ class RankResponse(BaseModel):
     # результат ранжирования
     total_filtered: int = Field(..., description="Всего заявок после фильтрации")
     returned: int = Field(..., description="Возвращено заявок")
+    scoring_engine: str = Field("merit-ml-advisory-v3.2", description="Использованный движок скоринга")
+    model_name: Optional[str] = Field(None, description="Имя загруженной ML-модели")
     applications: list[ApplicationBrief]
 
 
@@ -94,6 +130,23 @@ class ExplainResponse(BaseModel):
     status: str
     score: float
     risk_level: str
+    rule_score: Optional[float] = Field(None, description="Rule-based score")
+    ml_score: Optional[float] = Field(None, description="ML score 0-100")
+    ml_probability: Optional[float] = Field(None, description="Оценка итоговой силы заявки по dual-branch ML")
+    history_match_source: str = Field("global", description="Какой исторический срез использован для advisory")
+    history_match_count: int = Field(0, description="Сколько похожих исторических заявок найдено")
+    history_approval_rate: Optional[float] = Field(None, description="Историческая одобряемость похожих заявок")
+    history_advisory_score: Optional[float] = Field(None, description="Исторический advisory score 0-100")
+    history_recommendation: Optional[str] = Field(None, description="Текстовая историческая рекомендация")
+    history_note: Optional[str] = Field(None, description="Пояснение по historical advisory")
+    disqualified: bool = Field(False, description="Флаг мгновенной дисквалификации")
+    disqualification_reason: Optional[str] = Field(None, description="Причина дисквалификации")
+    eligibility_status: str = Field("preliminarily_eligible", description="Статус eligibility-проверки")
+    manual_review_required: bool = Field(True, description="Нужна ли ручная проверка критериев приложения 2")
+    eligibility_note: Optional[str] = Field(None, description="Пояснение по preliminary eligibility")
+    normative_reference_found: bool = Field(True, description="Найден ли эталонный норматив в локальном справочнике")
+    scoring_engine: str = Field("merit-ml-advisory-v3.2", description="Использованный движок скоринга")
+    model_name: Optional[str] = Field(None, description="Имя загруженной ML-модели")
     factors: list[FactorDetail]
     explanation: list[str]
 
@@ -124,15 +177,24 @@ class StatsResponse(BaseModel):
     min_score: float
     max_score: float
     risk_distribution: dict[str, int]
+    scoring_engine: str = "merit-ml-advisory-v3.2"
+    model_name: Optional[str] = None
     top_regions: list[RegionStat]
 
 
 class HealthResponse(BaseModel):
     # проверка работоспособности
     status: str = "ok"
-    version: str = "2.0.0"
+    version: str = "3.2.0"
     records_loaded: int = 0
-    scoring_engine: str = "rule-based-v2"
+    scoring_engine: str = "merit-ml-advisory-v3.2"
+    model_loaded: bool = False
+    model_name: Optional[str] = None
+    model_path: Optional[str] = None
+    context_branch_model: Optional[str] = None
+    core_branch_model: Optional[str] = None
+    context_weight: Optional[float] = None
+    core_weight: Optional[float] = None
 
 
 class PaginatedApplications(BaseModel):
@@ -140,4 +202,6 @@ class PaginatedApplications(BaseModel):
     total: int
     page: int
     per_page: int
+    scoring_engine: str = "merit-ml-advisory-v3.2"
+    model_name: Optional[str] = None
     applications: list[ApplicationBrief]

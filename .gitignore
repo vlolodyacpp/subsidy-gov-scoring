@@ -5,6 +5,10 @@ __pycache__/
 .venv/
 venv/
 output/
+models/artifacts/*
+!models/artifacts/.gitkeep
+models/reports/*
+!models/reports/.gitkeep
 *.egg-info/
 dist/
 build/

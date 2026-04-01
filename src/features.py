@@ -8,6 +8,37 @@ from src.normatives import (
 )
 
 
+def _sort_by_submit_order(df: pd.DataFrame) -> pd.DataFrame:
+    df_sorted = df.copy()
+    df_sorted["_sort_submit_date"] = pd.to_datetime(
+        df_sorted["submit_date"], errors="coerce"
+    ).fillna(pd.Timestamp.max)
+    df_sorted["_sort_app_number"] = df_sorted["app_number"].astype(str)
+    df_sorted["_orig_index"] = df_sorted.index
+    return df_sorted.sort_values(
+        ["_sort_submit_date", "_sort_app_number", "_orig_index"],
+        kind="mergesort",
+    )
+
+
+def _single_temporal_features(submit_date, submit_month: int | None = None) -> dict[str, float]:
+    if pd.isna(submit_date):
+        month = submit_month if submit_month is not None else 6
+        angle = 2 * np.pi * (month - 1) / 12
+        return {
+            "submit_month_sin": float(np.sin(angle)),
+            "submit_month_cos": float(np.cos(angle)),
+        }
+
+    month = int(getattr(submit_date, "month", submit_month or 6))
+    angle = 2 * np.pi * (month - 1) / 12
+
+    return {
+        "submit_month_sin": float(np.sin(angle)),
+        "submit_month_cos": float(np.cos(angle)),
+    }
+
+
 def compute_approval_rates(df: pd.DataFrame) -> dict:
     # вычисление процентов одобрений по направлениям, типам субсидий, акиматам, и кросс-метрик
     rates = {}
@@ -57,70 +88,105 @@ def compute_region_specialization(df: pd.DataFrame) -> dict:
     return spec
 
 
+def compute_historical_approval_rate(
+    df: pd.DataFrame,
+    group_cols: str | list[str],
+    default_rate: float = 0.5,
+) -> pd.Series:
+    df_sorted = _sort_by_submit_order(df)
+    grouped = df_sorted.groupby(group_cols, sort=False)
+    prev_approved = grouped["is_approved"].cumsum() - df_sorted["is_approved"]
+    prev_count = grouped.cumcount()
+    rates = np.where(
+        prev_count > 0,
+        (prev_approved + 1) / (prev_count + 2),
+        default_rate,
+    )
+    result = pd.Series(rates, index=df_sorted["_orig_index"])
+    return result.reindex(df.index).astype(float)
+
+
+def compute_historical_region_specialization(df: pd.DataFrame) -> pd.Series:
+    df_sorted = _sort_by_submit_order(df)
+    prev_region_total = df_sorted.groupby("region", sort=False).cumcount()
+    prev_region_direction = df_sorted.groupby(
+        ["region", "direction"], sort=False
+    ).cumcount()
+
+    specialization = np.where(
+        prev_region_total > 0,
+        (prev_region_direction + 1) / (prev_region_total + 2),
+        0.5,
+    )
+    result = pd.Series(specialization, index=df_sorted["_orig_index"])
+    return result.reindex(df.index).astype(float)
+
+
+def compute_historical_amount_adequacy(df: pd.DataFrame) -> pd.Series:
+    df_sorted = _sort_by_submit_order(df)
+    grouped = df_sorted.groupby("subsidy_type", sort=False)["amount"]
+
+    hist_median = grouped.transform(lambda s: s.expanding().median().shift(1))
+    hist_std = grouped.transform(lambda s: s.expanding().std().shift(1))
+    global_hist_median = df_sorted["amount"].expanding().median().shift(1)
+    global_hist_std = df_sorted["amount"].expanding().std().shift(1)
+
+    hist_median = hist_median.fillna(global_hist_median).fillna(df_sorted["amount"])
+    hist_std = hist_std.fillna(global_hist_std)
+    hist_std = hist_std.replace(0, np.nan).fillna(hist_median.abs().replace(0, np.nan))
+    hist_std = hist_std.fillna(df_sorted["amount"].abs().replace(0, np.nan))
+    hist_std = hist_std.fillna(1.0)
+
+    z_scores = (df_sorted["amount"] - hist_median).abs() / hist_std
+    adequacy = (1 - z_scores.clip(0, 3) / 3).clip(0, 1)
+    result = pd.Series(adequacy, index=df_sorted["_orig_index"])
+    return result.reindex(df.index).astype(float)
+
+
+def compute_historical_amount_to_median_ratio(df: pd.DataFrame) -> pd.Series:
+    df_sorted = _sort_by_submit_order(df)
+    grouped = df_sorted.groupby("subsidy_type", sort=False)["amount"]
+
+    hist_median = grouped.transform(lambda s: s.expanding().median().shift(1))
+    global_hist_median = df_sorted["amount"].expanding().median().shift(1)
+    hist_median = hist_median.fillna(global_hist_median).replace(0, np.nan)
+    hist_median = hist_median.fillna(df_sorted["amount"]).replace(0, 1.0)
+
+    ratio = (df_sorted["amount"] / hist_median).clip(0, 5)
+    result = pd.Series(ratio, index=df_sorted["_orig_index"])
+    return result.reindex(df.index).astype(float)
+
+
 def compute_budget_pressure(df: pd.DataFrame) -> pd.Series:
-    # бюджетное давление
-    df_sorted = df.sort_values("submit_date").copy()
+    # бюджетное давление без утечки в будущее:
+    # используем только историю ранее поданных и ранее одобренных заявок
+    df_sorted = _sort_by_submit_order(df)
+    grouped = df_sorted.groupby(["region", "direction"], sort=False)
 
-    # кумулятивная сумма запрошенных средств внутри (region, direction)
-    df_sorted["cum_requested"] = df_sorted.groupby(
-        ["region", "direction"]
-    )["amount"].cumsum()
+    df_sorted["_approved_amount"] = df_sorted["amount"] * df_sorted["is_approved"]
+    cum_requested = grouped["amount"].cumsum()
+    prev_approved_amount = grouped["_approved_amount"].cumsum() - df_sorted["_approved_amount"]
 
-    # общая одобренная сумма по (region, direction)
-    approved_totals = (
-        df[df["is_approved"] == 1]
-        .groupby(["region", "direction"])["amount"]
-        .sum()
-    )
-
-    # маппинг общей одобренной суммы
-    df_sorted["total_approved"] = df_sorted.apply(
-        lambda row: approved_totals.get((row["region"], row["direction"]), 0),
-        axis=1,
-    )
-
-    # budget_pressure: чем меньше запрошено относительно одобренного — тем ближе к 1.0
     pressure = np.where(
-        df_sorted["total_approved"] > 0,
-        np.clip(1 - df_sorted["cum_requested"] / df_sorted["total_approved"], 0, 1),
-        0.5,  # неизвестно
+        prev_approved_amount > 0,
+        np.clip(1 - cum_requested / prev_approved_amount, 0, 1),
+        0.5,
     )
 
-    # Вернуть в исходном порядке индексов
-    result = pd.Series(pressure, index=df_sorted.index)
-    return result.reindex(df.index)
+    result = pd.Series(pressure, index=df_sorted["_orig_index"])
+    return result.reindex(df.index).astype(float)
 
 
 def compute_queue_position(df: pd.DataFrame) -> pd.Series:
-    # позиция в очереди подачи
-    df_sorted = df.sort_values("submit_date").copy()
+    # позиция в очереди подачи без знания будущего числа заявок в группе
+    df_sorted = _sort_by_submit_order(df)
+    prior_count = df_sorted.groupby(
+        ["region", "direction", "subsidy_type"], sort=False
+    ).cumcount()
 
-    # ранг внутри группы
-    df_sorted["rank"] = df_sorted.groupby(
-        ["region", "direction", "subsidy_type"]
-    ).cumcount() + 1
-
-    # общее количество в группе
-    group_sizes = df.groupby(
-        ["region", "direction", "subsidy_type"]
-    ).size()
-
-    df_sorted["group_total"] = df_sorted.apply(
-        lambda row: group_sizes.get(
-            (row["region"], row["direction"], row["subsidy_type"]), 1
-        ),
-        axis=1,
-    )
-
-    # нормализация: ранние = ближе к 1.0
-    position = np.where(
-        df_sorted["group_total"] > 1,
-        1 - (df_sorted["rank"] - 1) / (df_sorted["group_total"] - 1),
-        0.5,  # единственная заявка в группе
-    )
-
-    result = pd.Series(position, index=df_sorted.index)
-    return result.reindex(df.index)
+    position = 1 / np.sqrt(prior_count + 1)
+    result = pd.Series(position, index=df_sorted["_orig_index"])
+    return result.reindex(df.index).astype(float)
 
 
 def build_feature_tables(df: pd.DataFrame) -> dict:
@@ -134,7 +200,7 @@ def build_feature_tables(df: pd.DataFrame) -> dict:
 
 
 def extract_features(row: pd.Series, tables: dict) -> dict:
-    # извлечение 12 числовых признаков из одной заявки
+    # извлечение признаков из одной заявки
     ar = tables["approval_rates"]
     amt = tables["amount_stats"]
     spec = tables["region_specialization"]
@@ -175,6 +241,10 @@ def extract_features(row: pd.Series, tables: dict) -> dict:
     # deadline_compliance
     submit_date = row.get("submit_date", None)
     deadline_compliance = check_deadline_compliance(submit_date)
+    temporal_features = _single_temporal_features(
+        submit_date,
+        submit_month=row.get("submit_month", None),
+    )
 
     # budget_pressure — для single scoring используем 0.5 (нет контекста очереди)
     budget_pressure = 0.5
@@ -202,6 +272,7 @@ def extract_features(row: pd.Series, tables: dict) -> dict:
 
     direction_rate = ar["direction"].get(row["direction"], {}).get("approval_rate", 0.5)
     subsidy_rate = ar["subsidy_type"].get(row["subsidy_type"], {}).get("approval_rate", 0.5)
+    region_rate = ar["region"].get(row["region"], {}).get("approval_rate", 0.5)
 
     # unit_count (нормализованный через перцентиль — для single = 0.5)
     if effective_norm and effective_norm > 0:
@@ -209,6 +280,8 @@ def extract_features(row: pd.Series, tables: dict) -> dict:
     else:
         unit_count_raw = 0
     unit_count_norm = 0.5  # для single scoring без batch-контекста
+    amount_to_type_median_ratio = row["amount"] / median_val if median_val > 0 else 1.0
+    amount_log = float(np.log1p(max(row["amount"], 0)))
 
     return {
         "normative_match": normative_match,
@@ -223,14 +296,68 @@ def extract_features(row: pd.Series, tables: dict) -> dict:
         "unit_count": unit_count_norm,
         "direction_approval_rate": direction_rate,
         "subsidy_type_approval_rate": subsidy_rate,
+        "region_approval_rate": region_rate,
+        "amount_log": amount_log,
+        "amount_to_type_median_ratio": float(np.clip(amount_to_type_median_ratio, 0, 5)),
+        "submit_month_sin": temporal_features["submit_month_sin"],
+        "submit_month_cos": temporal_features["submit_month_cos"],
     }
 
 
+def extract_features_single_with_history(
+    row: pd.Series,
+    history_df: pd.DataFrame,
+    normative_lookup: dict[str, int],
+) -> dict:
+    row_series = row.copy()
+    submit_date = pd.to_datetime(row_series.get("submit_date"), errors="coerce")
+    submit_month = row_series.get("submit_month")
+    if pd.isna(submit_month):
+        submit_month = submit_date.month if not pd.isna(submit_date) else 6
+
+    request_row = pd.DataFrame(
+        [
+            {
+                "app_number": "__request__",
+                "region": str(row_series.get("region", "")).strip(),
+                "district": str(row_series.get("district", "")).strip(),
+                "direction": str(row_series.get("direction", "")).strip(),
+                "subsidy_type": str(row_series.get("subsidy_type", "")).strip(),
+                "akimat": str(row_series.get("akimat", "")).strip(),
+                "status": "Черновик",
+                "normative": pd.to_numeric(
+                    pd.Series([row_series.get("normative")]), errors="coerce"
+                ).fillna(0).iloc[0],
+                "amount": pd.to_numeric(
+                    pd.Series([row_series.get("amount")]), errors="coerce"
+                ).fillna(0).iloc[0],
+                "submit_date": submit_date,
+                "submit_month": submit_month,
+                "is_approved": 0,
+            }
+        ]
+    )
+
+    required_columns = request_row.columns.tolist()
+    history = history_df.copy()
+    for column in required_columns:
+        if column not in history.columns:
+            history[column] = pd.NA
+
+    history["submit_date"] = pd.to_datetime(history["submit_date"], errors="coerce")
+    if not pd.isna(submit_date):
+        history = history[history["submit_date"].isna() | (history["submit_date"] <= submit_date)]
+
+    combined = pd.concat([history[required_columns], request_row], ignore_index=True)
+    features = extract_features_batch(
+        combined,
+        {"normative_lookup": normative_lookup},
+    )
+    return features.iloc[-1].to_dict()
+
+
 def extract_features_batch(df: pd.DataFrame, tables: dict) -> pd.DataFrame:
-    # векторизованное извлечение всех 12 признаков для всего датафрейма
-    ar = tables["approval_rates"]
-    amt = tables["amount_stats"]
-    spec = tables["region_specialization"]
+    # векторизованное извлечение признаков для всего датафрейма
     norm_lookup = tables["normative_lookup"]
 
     features = pd.DataFrame(index=df.index)
@@ -270,24 +397,25 @@ def extract_features_batch(df: pd.DataFrame, tables: dict) -> pd.DataFrame:
         (1 - remainders.abs() * 4).clip(0, 1).fillna(0.5)
     )
 
-    # amount_adequacy 
-    medians = df["subsidy_type"].map(
-        {k: v["median"] for k, v in amt.items()}
-    ).fillna(1)
-    stds = df["subsidy_type"].map(
-        {k: v["std"] for k, v in amt.items()}
-    ).fillna(1).replace(0, 1)
+    # amount_adequacy — считаем по историческому распределению,
+    # чтобы не использовать будущие суммы
+    features["amount_adequacy"] = compute_historical_amount_adequacy(df)
 
-    z_scores = (df["amount"] - medians).abs() / stds
-    features["amount_adequacy"] = (1 - z_scores.clip(0, 3) / 3).clip(0, 1)
-
-    # unit_count (перцентильный ранг)
+    # unit_count — относительный размер заявки к исторической медиане,
+    # без использования будущих заявок того же типа
     features["_unit_count_raw"] = df["amount"] / effective_norm_safe.fillna(1)
-
-    # перцентильный ранг внутри subsidy_type
-    features["unit_count"] = features.groupby(df["subsidy_type"])[
-        "_unit_count_raw"
-    ].rank(pct=True).fillna(0.5)
+    df_sorted = _sort_by_submit_order(df)
+    unit_raw_sorted = features.loc[df_sorted["_orig_index"], "_unit_count_raw"]
+    unit_hist_median = unit_raw_sorted.groupby(
+        df_sorted["subsidy_type"], sort=False
+    ).transform(lambda s: s.expanding().median().shift(1))
+    global_unit_hist_median = unit_raw_sorted.expanding().median().shift(1)
+    unit_hist_median = unit_hist_median.fillna(global_unit_hist_median).replace(0, np.nan)
+    unit_hist_median = unit_hist_median.fillna(unit_raw_sorted).replace(0, np.nan)
+    unit_hist_median = unit_hist_median.fillna(1.0)
+    unit_scaled = (unit_raw_sorted / unit_hist_median).clip(0, 2) / 2
+    features.loc[df_sorted["_orig_index"], "unit_count"] = unit_scaled.to_numpy()
+    features["unit_count"] = features["unit_count"].fillna(0.5)
     features.drop(columns=["_unit_count_raw"], inplace=True)
 
     # deadline_compliance
@@ -299,31 +427,26 @@ def extract_features_batch(df: pd.DataFrame, tables: dict) -> pd.DataFrame:
     # queue_position
     features["queue_position"] = compute_queue_position(df)
 
-    # region_specialization
-    features["region_specialization"] = df.apply(
-        lambda row: spec.get((row["region"], row["direction"]), 0.1),
-        axis=1,
+    # региональные и approval-rate признаки считаем только по прошлой истории
+    features["region_specialization"] = compute_historical_region_specialization(df)
+    features["region_approval_rate"] = compute_historical_approval_rate(df, "region")
+    features["region_direction_approval_rate"] = compute_historical_approval_rate(
+        df, ["region", "direction"]
     )
-
-    # region_direction_approval_rate
-    rd_rates = ar.get("region_direction", {})
-    features["region_direction_approval_rate"] = df.apply(
-        lambda row: rd_rates.get(
-            (row["region"], row["direction"]), {}
-        ).get("approval_rate", 0.5),
-        axis=1,
+    features["akimat_approval_rate"] = compute_historical_approval_rate(df, "akimat")
+    features["direction_approval_rate"] = compute_historical_approval_rate(
+        df, "direction"
     )
-
-    # akimat_approval_rate
-    akimat_rates = {k: v["approval_rate"] for k, v in ar["akimat"].items()}
-    features["akimat_approval_rate"] = df["akimat"].map(akimat_rates).fillna(0.5)
-
-    features["direction_approval_rate"] = df["direction"].map(
-        {k: v["approval_rate"] for k, v in ar["direction"].items()}
-    ).fillna(0.5)
-
-    features["subsidy_type_approval_rate"] = df["subsidy_type"].map(
-        {k: v["approval_rate"] for k, v in ar["subsidy_type"].items()}
-    ).fillna(0.5)
+    features["subsidy_type_approval_rate"] = compute_historical_approval_rate(
+        df, "subsidy_type"
+    )
+    features["amount_log"] = np.log1p(df["amount"].clip(lower=0))
+    features["amount_to_type_median_ratio"] = compute_historical_amount_to_median_ratio(df)
+    submit_month = pd.to_datetime(df["submit_date"], errors="coerce").dt.month.fillna(
+        df.get("submit_month", 6)
+    )
+    angle = 2 * np.pi * (submit_month - 1) / 12
+    features["submit_month_sin"] = np.sin(angle)
+    features["submit_month_cos"] = np.cos(angle)
 
     return features

@@ -1,5 +1,4 @@
 import pandas as pd
-import numpy as np
 from dataclasses import dataclass
 
 
@@ -10,15 +9,14 @@ WEIGHTS = {
     "amount_normative_integrity":   0.08,
     "amount_adequacy":              0.08,
 
-    # группа 2: сроки и бюджет (30%)
-    "deadline_compliance":          0.08,
-    "budget_pressure":              0.12,
-    "queue_position":               0.10,
+    # группа 2: бюджет и очередь (28%)
+    "budget_pressure":              0.16,
+    "queue_position":               0.12,
 
-    # группа 3: региональная специфика (29%)
+    # группа 3: региональная специфика (31%)
     "region_specialization":        0.10,
-    "region_direction_approval_rate": 0.12,
-    "akimat_approval_rate":         0.07,
+    "region_direction_approval_rate": 0.13,
+    "akimat_approval_rate":         0.08,
 
     # группа 4: характеристики заявки (15%)
     "unit_count":                   0.05,
@@ -30,7 +28,6 @@ FACTOR_LABELS = {
     "normative_match":              "Соответствие норматива эталону",
     "amount_normative_integrity":   "Арифметическая корректность суммы",
     "amount_adequacy":              "Адекватность суммы заявки",
-    "deadline_compliance":          "Соблюдение срока подачи",
     "budget_pressure":              "Бюджетное давление",
     "queue_position":               "Позиция в очереди подачи",
     "region_specialization":        "Профильность направления для региона",
@@ -44,10 +41,12 @@ FACTOR_LABELS = {
 # группировка факторов для объяснений
 FACTOR_GROUPS = {
     "Нормативное соответствие": ["normative_match", "amount_normative_integrity", "amount_adequacy"],
-    "Сроки и бюджет": ["deadline_compliance", "budget_pressure", "queue_position"],
+    "Бюджет и очередь": ["budget_pressure", "queue_position"],
     "Региональная специфика": ["region_specialization", "region_direction_approval_rate", "akimat_approval_rate"],
     "Характеристики заявки": ["unit_count", "direction_approval_rate", "subsidy_type_approval_rate"],
 }
+
+DEADLINE_DISQUALIFICATION_REASON = "Просрочен срок подачи заявки"
 
 
 @dataclass
@@ -58,8 +57,17 @@ class ScoringResult:
     risk_level: str                 # низкий / средний / высокий
 
 
+def get_disqualification_reason(features: dict | pd.Series) -> str | None:
+    deadline_value = features.get("deadline_compliance", 0.5)
+    if pd.isna(deadline_value):
+        return None
+    if float(deadline_value) <= 0:
+        return DEADLINE_DISQUALIFICATION_REASON
+    return None
+
+
 def score_single(features: dict) -> ScoringResult:
-    # скоринг одной заявки с объяснением по 12 факторам
+    # скоринг одной допустимой заявки с explainability по rule-факторам
     factors = {}
     raw_score = 0.0
 
@@ -103,7 +111,6 @@ def score_single(features: dict) -> ScoringResult:
             label = FACTOR_LABELS.get(factor, factor)
             explanation.append(f"    {label}: {value:.0%} → +{contrib:.1f}")
 
-    # определяем уровень риска
     risk_level = "низкий" if score >= 70 else "средний" if score >= 45 else "высокий"
 
     return ScoringResult(
@@ -115,7 +122,7 @@ def score_single(features: dict) -> ScoringResult:
 
 
 def score_batch(features_df: pd.DataFrame) -> pd.DataFrame:
-    # векторизированный скоринг по 12 факторам
+    # векторизированный скоринг допустимых заявок + eligibility-флаг по дедлайну
     scores = pd.Series(0.0, index=features_df.index)
     factor_contributions = {}
 
@@ -132,6 +139,13 @@ def score_batch(features_df: pd.DataFrame) -> pd.DataFrame:
         bins=[-1, 45, 70, 101],
         labels=["Высокий", "Средний", "Низкий"],
     )
+    result["disqualified"] = False
+    result["disqualification_reason"] = None
+
+    deadline_mask = features_df.get("deadline_compliance", pd.Series(0.5, index=features_df.index)).fillna(0.5) <= 0
+    if deadline_mask.any():
+        result.loc[deadline_mask, "disqualified"] = True
+        result.loc[deadline_mask, "disqualification_reason"] = DEADLINE_DISQUALIFICATION_REASON
 
     # главный фактор и главная группа
     contrib_cols = [c for c in result.columns if c.startswith("contrib_")]

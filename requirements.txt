@@ -1,2 +1,8 @@
 pandas>=2.0         # Обработка данных
+numpy>=1.24         # Численные вычисления
 openpyxl>=3.1       # Чтение xlsx
+pydantic>=2.0       # Схемы API
+fastapi>=0.110      # API
+uvicorn>=0.29       # ASGI сервер
+scikit-learn>=1.4   # Обучение ML-модели
+joblib>=1.3         # Сохранение модели
