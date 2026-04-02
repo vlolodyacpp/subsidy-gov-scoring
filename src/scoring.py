@@ -79,8 +79,32 @@ def score_single(features: dict) -> ScoringResult:
 
     score = round(min(max(raw_score, 0), 100), 1)
 
-    # генерация объяснений по группам
+    # генерация объяснений по группам — человечным языком
     explanation = []
+
+    GROUP_DESCRIPTIONS = {
+        "Нормативное соответствие": {
+            "high": "документы полностью соответствуют установленным правилам",
+            "medium": "есть незначительные расхождения с нормативами",
+            "low": "выявлены существенные расхождения с эталонными нормативами",
+        },
+        "Бюджет и очередь": {
+            "high": "заявка подана в благоприятный период, конкуренция невысокая",
+            "medium": "средняя конкуренция за бюджетные средства",
+            "low": "высокая конкуренция или поздняя подача заявки",
+        },
+        "Региональная специфика": {
+            "high": "направление хорошо развито в регионе, высокая одобряемость",
+            "medium": "направление умеренно представлено в регионе",
+            "low": "направление нетипично для данного региона",
+        },
+        "Характеристики заявки": {
+            "high": "параметры заявки характерны для успешных обращений",
+            "medium": "параметры заявки в рамках нормы",
+            "low": "параметры заявки нетипичны для одобряемых обращений",
+        },
+    }
+
     for group_name, group_factors in FACTOR_GROUPS.items():
         group_total = sum(factors.get(f, 0) for f in group_factors)
         group_max = sum(WEIGHTS.get(f, 0) for f in group_factors) * 100
@@ -91,17 +115,16 @@ def score_single(features: dict) -> ScoringResult:
             group_pct = 0
 
         if group_pct >= 0.7:
-            icon = "✓"
-            level = "сильная"
+            level_key = "high"
         elif group_pct >= 0.4:
-            icon = "●"
-            level = "средняя"
+            level_key = "medium"
         else:
-            icon = "✗"
-            level = "слабая"
+            level_key = "low"
 
+        desc = GROUP_DESCRIPTIONS.get(group_name, {}).get(level_key, "")
         explanation.append(
-            f"{icon} {group_name}: {level} ({group_total:.1f}/{group_max:.0f} баллов)"
+            f"{group_name}: {desc} "
+            f"(оценка {group_total:.1f} из {group_max:.0f})."
         )
 
         # детализация по факторам внутри группы
@@ -109,7 +132,8 @@ def score_single(features: dict) -> ScoringResult:
             value = features.get(factor, 0)
             contrib = factors.get(factor, 0)
             label = FACTOR_LABELS.get(factor, factor)
-            explanation.append(f"    {label}: {value:.0%} → +{contrib:.1f}")
+            max_contrib = WEIGHTS.get(factor, 0) * 100
+            explanation.append(f"  • {label}: {contrib:.1f} из {max_contrib:.0f}")
 
     risk_level = "низкий" if score >= 70 else "средний" if score >= 45 else "высокий"
 

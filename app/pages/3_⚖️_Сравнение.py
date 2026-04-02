@@ -55,6 +55,19 @@ def render_comparison(app_numbers: list[str]):
 
     factors_a = {f["name"]: f for f in detail_a.get("factors", [])}
     factors_b = {f["name"]: f for f in detail_b.get("factors", [])}
+    
+    with st.expander("ℹ️ Памятка: Веса факторов (нажмите, чтобы раскрыть)"):
+        st.markdown(
+            "Система оценки учитывает множество факторов. Каждый из них имеет закреплённый вес "
+            "(значимость). Ниже представлены все веса, которые используются при расчёте "
+            "общей оценки (Score)."
+        )
+        memo_data = []
+        for factor_name, factor_weight in WEIGHTS.items():
+            # Достаем понятное название (label) из расчетов A или B
+            label = factors_a.get(factor_name, factors_b.get(factor_name, {})).get("label", factor_name)
+            memo_data.append({"Фактор оценки": label, "Вес при расчёте": f"{factor_weight:.0%}"})
+        st.dataframe(pd.DataFrame(memo_data), hide_index=True)
 
     all_names = list(WEIGHTS.keys())
     labels = [factors_a.get(n, factors_b.get(n, {})).get("label", n) for n in all_names]

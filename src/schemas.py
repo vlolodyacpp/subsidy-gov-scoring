@@ -151,6 +151,7 @@ class ExplainResponse(BaseModel):
     scoring_engine: str = Field("merit-ml-advisory-v4.0", description="Использованный движок скоринга")
     model_name: Optional[str] = Field(None, description="Имя загруженной ML-модели")
     factors: list[FactorDetail]
+    ml_factors: list[FactorDetail] = Field(default_factory=list, description="ML feature effects (top impacts)")
     explanation: list[str]
 
 

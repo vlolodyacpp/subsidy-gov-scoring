@@ -196,6 +196,38 @@ def _format_ml_effect_label(name: str, value) -> str:
     return f"{name} = {value}"
 
 
+# human-readable names for ML features used in explanations
+_ML_FACTOR_HUMAN_NAMES = {
+    "normative_match": "соответствие нормативу",
+    "amount_normative_integrity": "корректность суммы",
+    "amount_adequacy": "адекватность суммы",
+    "budget_pressure": "бюджетное давление",
+    "queue_position": "позиция в очереди",
+    "region_specialization": "профильность региона",
+    "region_direction_approval_rate": "одобряемость направления в регионе",
+    "akimat_approval_rate": "одобрение акимата",
+    "unit_count": "кол-во единиц",
+    "direction_approval_rate": "одобряемость направления",
+    "subsidy_type_approval_rate": "одобряемость типа субсидии",
+    "rule_score": "оценка по правилам",
+    "contrib_budget_pressure": "вклад бюджетного давления",
+    "contrib_region_direction_approval_rate": "вклад одобряемости региона",
+    "contrib_normative_match": "вклад соответствия нормативу",
+    "contrib_queue_position": "вклад позиции в очереди",
+    "contrib_akimat_approval_rate": "вклад одобрения акимата",
+    "region_encoded": "региональный код",
+    "direction_encoded": "код направления",
+    "submit_month": "месяц подачи",
+    "log_amount": "размер суммы (лог.)",
+    "amount_per_unit": "сумма на единицу",
+}
+
+
+def _format_ml_factor_human(name: str) -> str:
+    """Convert internal ML feature name to human-readable Russian."""
+    return _ML_FACTOR_HUMAN_NAMES.get(name, name)
+
+
 def _build_model_factor_details(model_explanation: dict[str, object] | None) -> list[FactorDetail]:
     if not model_explanation:
         return []
@@ -212,10 +244,12 @@ def _build_model_factor_details(model_explanation: dict[str, object] | None) -> 
             level = "низкий"
 
         raw_value = _safe_feature_value(item.get("value"))
+        feature_name = str(item.get("name"))
+        human_label = _format_ml_factor_human(feature_name)
         factor_details.append(
             FactorDetail(
-                name=str(item.get("name")),
-                label=_format_ml_effect_label(str(item.get("name")), raw_value),
+                name=feature_name,
+                label=human_label,
                 value=raw_value,
                 contribution=round(contribution, 2),
                 level=level,
@@ -235,18 +269,38 @@ def _build_ml_explanation_lines(
         return []
 
     weights = getattr(app.state, "blend_weights", DEFAULT_BLEND_WEIGHTS)
-    if weights["rule_score"] <= 0:
-        score_line = f"Итоговый primary ML score: {final_score:.1f}/100"
+
+    lines = []
+
+    # Probability description
+    if ml_probability >= 0.8:
+        prob_desc = "высоко оценивает шансы заявки"
+    elif ml_probability >= 0.6:
+        prob_desc = "оценивает шансы заявки как хорошие"
+    elif ml_probability >= 0.4:
+        prob_desc = "оценивает шансы заявки как средние"
     else:
-        score_line = (
-            f"Итоговый combined score: {final_score:.1f}/100 "
-            f"(rule {weights['rule_score']:.0%}, ML {weights['ml_score']:.0%})"
+        prob_desc = "оценивает шансы заявки как невысокие"
+
+    lines.append(
+        f"Нейросетевая модель {prob_desc} на одобрение — "
+        f"вероятность составляет {ml_probability:.0%}, "
+        f"что соответствует {ml_score:.1f} баллам из 100."
+    )
+
+    # Final score composition
+    if weights["rule_score"] > 0 and weights["ml_score"] > 0:
+        lines.append(
+            f"Итоговый балл ({final_score:.1f}) складывается из оценки по правилам "
+            f"({rule_score:.1f}) и оценки модели ({ml_score:.1f}) "
+            f"в пропорции {weights['rule_score']:.0%} / {weights['ml_score']:.0%}."
         )
-    lines = [
-        f"Primary ML-оценка итоговой силы заявки: {ml_probability:.1%} → {ml_score:.1f}/100",
-        score_line,
-        f"Rule-based diagnostic score: {rule_score:.1f}/100",
-    ]
+    elif weights["rule_score"] <= 0:
+        lines.append(
+            f"Итоговый балл ({final_score:.1f}) полностью определяется ML-моделью."
+        )
+
+    # ML feature effects — human-readable
     if model_explanation:
         top_positive = [
             item
@@ -259,22 +313,22 @@ def _build_ml_explanation_lines(
             if float(item.get("score_impact", 0.0)) < 0
         ][:3]
         if top_positive:
+            positive_items = ", ".join(
+                f"{_format_ml_factor_human(str(item['name']))} "
+                f"(+{float(item['score_impact']):.1f} б.)"
+                for item in top_positive
+            )
             lines.append(
-                "Главные положительные ML-сигналы: "
-                + "; ".join(
-                    f"{_format_ml_effect_label(str(item['name']), _safe_feature_value(item.get('value')))} "
-                    f"({float(item['score_impact']):+.1f} п.п.)"
-                    for item in top_positive
-                )
+                f"✅ Модель положительно отметила: {positive_items}."
             )
         if top_negative:
+            negative_items = ", ".join(
+                f"{_format_ml_factor_human(str(item['name']))} "
+                f"({float(item['score_impact']):.1f} б.)"
+                for item in top_negative
+            )
             lines.append(
-                "Главные сдерживающие ML-сигналы: "
-                + "; ".join(
-                    f"{_format_ml_effect_label(str(item['name']), _safe_feature_value(item.get('value')))} "
-                    f"({float(item['score_impact']):+.1f} п.п.)"
-                    for item in top_negative
-                )
+                f"⚠ Модель обратила внимание на слабые стороны: {negative_items}."
             )
     return lines
 
@@ -285,11 +339,17 @@ def _build_history_explanation_lines(history_payload: dict[str, object]) -> list
     if history_score is None or history_recommendation is None:
         return []
 
+    score_val = float(history_score)
+    if score_val >= 70:
+        assessment = "положительный"
+    elif score_val >= 40:
+        assessment = "умеренный"
+    else:
+        assessment = "настораживающий"
+
     lines = [
-        (
-            f"Историческая рекомендация: {history_recommendation} "
-            f"({float(history_score):.1f}/100)"
-        )
+        f"По историческим данным похожих заявок — {assessment} сигнал "
+        f"({history_recommendation}, {score_val:.0f}/100)."
     ]
     history_note = history_payload.get("history_note")
     if history_note:
@@ -801,11 +861,9 @@ async def score_application(request: ScoreRequest):
         )
     )
     explanation.extend(_build_history_explanation_lines(score_payload))
-    explanation.append("Rule-based diagnostic breakdown:")
+    explanation.append("Детальная оценка по критериям:")
     explanation.extend(rule_result.explanation)
-    factor_details = _build_model_factor_details(model_explanation)
-    if not factor_details:
-        factor_details = _build_rule_factor_details(features_dict, rule_result)
+    factor_details = _build_rule_factor_details(features_dict, rule_result)
 
     response = ScoreResponse(
         score=score_payload["score"],
@@ -929,11 +987,10 @@ async def explain_score(app_id: str):
         )
     )
     explanation.extend(_build_history_explanation_lines(score_payload))
-    explanation.append("Rule-based diagnostic breakdown:")
+    explanation.append("Детальная оценка по критериям:")
     explanation.extend(rule_result.explanation)
-    factor_details = _build_model_factor_details(model_explanation)
-    if not factor_details:
-        factor_details = _build_rule_factor_details(features_dict, rule_result)
+    factor_details = _build_rule_factor_details(features_dict, rule_result)
+    ml_factor_details = _build_model_factor_details(model_explanation)
 
     response = ExplainResponse(
         app_number=str(row["app_number"]),
@@ -962,6 +1019,7 @@ async def explain_score(app_id: str):
         scoring_engine=score_payload["scoring_engine"],
         model_name=score_payload["model_name"],
         factors=factor_details,
+        ml_factors=ml_factor_details,
         explanation=explanation,
     )
     _record_runtime_event("explain", (perf_counter() - start_time) * 1000)

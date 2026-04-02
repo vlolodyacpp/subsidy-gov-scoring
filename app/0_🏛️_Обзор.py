@@ -9,11 +9,34 @@ from shared import (
     PLOTLY_LAYOUT,
     page_setup,
 )
-from api_client import get_factor_stats
+from api_client import get_factor_stats, check_health
 
 
 def _fmt(val, fmt=".1f"):
     return f"{val:{fmt}}" if val is not None else "—"
+
+
+def render_model_info():
+    health = check_health()
+    if not health:
+        return
+
+    model_name = health.get("model_name")
+    if not model_name:
+        st.caption("Движок: rule-based only")
+        return
+
+    blend_rule = health.get("blend_rule_weight", 0)
+    blend_ml = health.get("blend_ml_weight", 0)
+    threshold = health.get("decision_threshold")
+    test_auc = health.get("test_roc_auc")
+
+    cols = st.columns(5)
+    cols[0].metric("Модель", model_name)
+    cols[1].metric("Rule вес", f"{blend_rule:.0%}" if blend_rule else "—")
+    cols[2].metric("ML вес", f"{blend_ml:.0%}" if blend_ml else "—")
+    cols[3].metric("Threshold", f"{threshold:.2f}" if threshold else "—")
+    cols[4].metric("Test ROC-AUC", f"{test_auc:.4f}" if test_auc else "—")
 
 
 def render_metrics(stats: dict):
@@ -121,7 +144,6 @@ def render_charts(applications: list[dict]):
 
 
 def render_factor_distributions(filters: dict):
-    """Средние значения каждого фактора — bar chart."""
     st.markdown('<p class="section-header">📊 Средние значения факторов</p>', unsafe_allow_html=True)
 
     factor_data = get_factor_stats(
@@ -203,6 +225,7 @@ def main():
         unsafe_allow_html=True,
     )
 
+    render_model_info()
     render_metrics(stats)
 
     col_left, col_right = st.columns(2)

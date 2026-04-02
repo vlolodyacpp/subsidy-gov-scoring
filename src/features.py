@@ -3,6 +3,7 @@ import numpy as np
 
 from src.normatives import (
     build_normative_lookup,
+    check_deadline_compliance,
     get_normative_for_type,
 )
 

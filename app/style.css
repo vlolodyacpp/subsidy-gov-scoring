@@ -320,6 +320,77 @@ header[data-testid="stHeader"] {
     margin-bottom: 0.2rem;
 }
 
+.group-card-narrative {
+    font-size: 0.92rem;
+    color: #9898b0;
+    font-style: italic;
+    padding-top: 0.2rem;
+    padding-bottom: 0.3rem;
+    line-height: 1.4;
+}
+
+
+/* итоговые оценки — блок карточек */
+
+.scores-breakdown {
+    display: flex;
+    gap: 1rem;
+    margin: 1rem 0 1.2rem;
+}
+
+.score-card {
+    flex: 1;
+    background: #1a1a2e;
+    border: 1px solid #3a3a5a;
+    border-radius: 12px;
+    padding: 1.2rem 1.4rem;
+    text-align: center;
+}
+
+.score-card-label {
+    font-size: 0.9rem;
+    color: #8888aa;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.5rem;
+}
+
+.score-card-value {
+    font-size: 2.2rem;
+    font-weight: 800;
+    line-height: 1.1;
+    margin-bottom: 0.5rem;
+}
+
+.score-card-max {
+    font-size: 1rem;
+    font-weight: 400;
+    color: #6a6a80;
+}
+
+.score-card-desc {
+    font-size: 0.82rem;
+    color: #7878a0;
+    line-height: 1.3;
+}
+
+
+/* вердикт */
+
+.verdict-card {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    border: 1px solid #3a3a5a;
+    border-radius: 12px;
+    padding: 1rem 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.verdict-text {
+    font-size: 1.1rem;
+    color: #d0d0e0;
+    line-height: 1.6;
+}
+
 
 /* факторы внутри группы */
 
