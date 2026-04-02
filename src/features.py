@@ -183,18 +183,22 @@ def compute_historical_group_count(
 
 
 def compute_budget_pressure(df: pd.DataFrame) -> pd.Series:
-    # бюджетное давление без утечки в будущее:
-    # используем только историю ранее поданных и ранее одобренных заявок
+    # бюджетное давление без утечки в будущее.
+    # Идея: какая доля запрошенных средств одобрялась в этой группе до сих пор?
+    # fulfillment_rate = prev_approved_amount / prev_requested_amount
+    #   ≈ 1.0 → почти всё одобрялось → давление низкое (score высокий)
+    #   ≈ 0.5 → половина отклоняется → давление среднее
+    #   → 0.0 → почти ничего не одобрялось → давление высокое (score низкий)
     df_sorted = _sort_by_submit_order(df)
     grouped = df_sorted.groupby(["region", "direction"], sort=False)
 
     df_sorted["_approved_amount"] = df_sorted["amount"] * df_sorted["is_approved"]
-    cum_requested = grouped["amount"].cumsum()
-    prev_approved_amount = grouped["_approved_amount"].cumsum() - df_sorted["_approved_amount"]
+    prev_approved = grouped["_approved_amount"].cumsum() - df_sorted["_approved_amount"]
+    prev_requested = grouped["amount"].cumsum() - df_sorted["amount"]
 
     pressure = np.where(
-        prev_approved_amount > 0,
-        np.clip(1 - cum_requested / prev_approved_amount, 0, 1),
+        prev_requested > 0,
+        (prev_approved / prev_requested).clip(0, 1),
         0.5,
     )
 
@@ -203,13 +207,16 @@ def compute_budget_pressure(df: pd.DataFrame) -> pd.Series:
 
 
 def compute_queue_position(df: pd.DataFrame) -> pd.Series:
-    # позиция в очереди подачи без знания будущего числа заявок в группе
+    # позиция в очереди подачи без знания будущего числа заявок в группе.
+    # Логарифмическое затухание: ранние заявки получают больший score,
+    # но затухание плавнее чем 1/sqrt, давая различимые значения даже
+    # для поздних заявок в крупных группах.
     df_sorted = _sort_by_submit_order(df)
     prior_count = df_sorted.groupby(
         ["region", "direction", "subsidy_type"], sort=False
     ).cumcount()
 
-    position = 1 / np.sqrt(prior_count + 1)
+    position = 1 / (1 + np.log1p(prior_count))
     result = pd.Series(position, index=df_sorted["_orig_index"])
     return result.reindex(df.index).astype(float)
 
