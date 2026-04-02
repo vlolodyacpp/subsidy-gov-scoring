@@ -51,8 +51,8 @@ class FactorDetail(BaseModel):
     # детали одного фактора скоринга
     name: str = Field(..., description="Системное имя фактора")
     label: str = Field(..., description="Человекочитаемое название")
-    value: float = Field(..., description="Значение признака (0-1)")
-    contribution: float = Field(..., description="Вклад в итоговый балл")
+    value: Optional[str | float] = Field(None, description="Наблюдаемое значение признака")
+    contribution: float = Field(..., description="Оценка вклада в итоговый балл")
     level: str = Field(..., description="Уровень: высокий / средний / низкий")
 
 
@@ -62,7 +62,7 @@ class ScoreResponse(BaseModel):
     risk_level: str = Field(..., description="Уровень риска")
     rule_score: Optional[float] = Field(None, description="Rule-based score")
     ml_score: Optional[float] = Field(None, description="ML score 0-100")
-    ml_probability: Optional[float] = Field(None, description="Оценка итоговой силы заявки по dual-branch ML")
+    ml_probability: Optional[float] = Field(None, description="Оценка итоговой силы заявки по primary ML")
     history_match_source: str = Field("global", description="Какой исторический срез использован для advisory")
     history_match_count: int = Field(0, description="Сколько похожих исторических заявок найдено")
     history_approval_rate: Optional[float] = Field(None, description="Историческая одобряемость похожих заявок")
@@ -75,7 +75,7 @@ class ScoreResponse(BaseModel):
     manual_review_required: bool = Field(True, description="Нужна ли ручная проверка критериев приложения 2")
     eligibility_note: Optional[str] = Field(None, description="Пояснение по предварительной eligibility-проверке")
     normative_reference_found: bool = Field(True, description="Найден ли эталонный норматив в локальном справочнике")
-    scoring_engine: str = Field("merit-ml-advisory-v3.2", description="Использованный движок скоринга")
+    scoring_engine: str = Field("merit-ml-advisory-v4.0", description="Использованный движок скоринга")
     model_name: Optional[str] = Field(None, description="Имя загруженной ML-модели")
     factors: list[FactorDetail] = Field(..., description="Детализация факторов")
     explanation: list[str] = Field(..., description="Текстовые объяснения")
@@ -106,7 +106,7 @@ class ApplicationBrief(BaseModel):
     manual_review_required: bool = True
     eligibility_note: Optional[str] = None
     normative_reference_found: bool = True
-    scoring_engine: str = "merit-ml-advisory-v3.2"
+    scoring_engine: str = "merit-ml-advisory-v4.0"
     model_name: Optional[str] = None
     top_factor: str
 
@@ -115,7 +115,7 @@ class RankResponse(BaseModel):
     # результат ранжирования
     total_filtered: int = Field(..., description="Всего заявок после фильтрации")
     returned: int = Field(..., description="Возвращено заявок")
-    scoring_engine: str = Field("merit-ml-advisory-v3.2", description="Использованный движок скоринга")
+    scoring_engine: str = Field("merit-ml-advisory-v4.0", description="Использованный движок скоринга")
     model_name: Optional[str] = Field(None, description="Имя загруженной ML-модели")
     applications: list[ApplicationBrief]
 
@@ -132,7 +132,7 @@ class ExplainResponse(BaseModel):
     risk_level: str
     rule_score: Optional[float] = Field(None, description="Rule-based score")
     ml_score: Optional[float] = Field(None, description="ML score 0-100")
-    ml_probability: Optional[float] = Field(None, description="Оценка итоговой силы заявки по dual-branch ML")
+    ml_probability: Optional[float] = Field(None, description="Оценка итоговой силы заявки по primary ML")
     history_match_source: str = Field("global", description="Какой исторический срез использован для advisory")
     history_match_count: int = Field(0, description="Сколько похожих исторических заявок найдено")
     history_approval_rate: Optional[float] = Field(None, description="Историческая одобряемость похожих заявок")
@@ -145,7 +145,7 @@ class ExplainResponse(BaseModel):
     manual_review_required: bool = Field(True, description="Нужна ли ручная проверка критериев приложения 2")
     eligibility_note: Optional[str] = Field(None, description="Пояснение по preliminary eligibility")
     normative_reference_found: bool = Field(True, description="Найден ли эталонный норматив в локальном справочнике")
-    scoring_engine: str = Field("merit-ml-advisory-v3.2", description="Использованный движок скоринга")
+    scoring_engine: str = Field("merit-ml-advisory-v4.0", description="Использованный движок скоринга")
     model_name: Optional[str] = Field(None, description="Имя загруженной ML-модели")
     factors: list[FactorDetail]
     explanation: list[str]
@@ -177,7 +177,7 @@ class StatsResponse(BaseModel):
     min_score: float
     max_score: float
     risk_distribution: dict[str, int]
-    scoring_engine: str = "merit-ml-advisory-v3.2"
+    scoring_engine: str = "merit-ml-advisory-v4.0"
     model_name: Optional[str] = None
     top_regions: list[RegionStat]
 
@@ -185,16 +185,27 @@ class StatsResponse(BaseModel):
 class HealthResponse(BaseModel):
     # проверка работоспособности
     status: str = "ok"
-    version: str = "3.2.0"
+    version: str = "4.0.0"
     records_loaded: int = 0
-    scoring_engine: str = "merit-ml-advisory-v3.2"
+    scoring_engine: str = "merit-ml-advisory-v4.0"
     model_loaded: bool = False
     model_name: Optional[str] = None
     model_path: Optional[str] = None
-    context_branch_model: Optional[str] = None
-    core_branch_model: Optional[str] = None
-    context_weight: Optional[float] = None
-    core_weight: Optional[float] = None
+    started_at: Optional[str] = None
+    model_created_at: Optional[str] = None
+    calibration_method: Optional[str] = None
+    decision_threshold: Optional[float] = None
+    blend_rule_weight: Optional[float] = None
+    blend_ml_weight: Optional[float] = None
+    test_roc_auc: Optional[float] = None
+    validation_roc_auc: Optional[float] = None
+    region_sensitivity_mean_delta: Optional[float] = None
+    score_requests_total: int = 0
+    rank_requests_total: int = 0
+    explain_requests_total: int = 0
+    avg_score_latency_ms: Optional[float] = None
+    avg_rank_latency_ms: Optional[float] = None
+    avg_explain_latency_ms: Optional[float] = None
 
 
 class PaginatedApplications(BaseModel):
@@ -202,6 +213,6 @@ class PaginatedApplications(BaseModel):
     total: int
     page: int
     per_page: int
-    scoring_engine: str = "merit-ml-advisory-v3.2"
+    scoring_engine: str = "merit-ml-advisory-v4.0"
     model_name: Optional[str] = None
     applications: list[ApplicationBrief]

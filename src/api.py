@@ -2,12 +2,18 @@ import logging
 from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
+from time import perf_counter
 
+import numpy as np
 import pandas as pd
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.advisory import build_history_advisory_batch, build_history_advisory_single
+from src.advisory import (
+    build_history_advisory_batch,
+    build_history_advisory_single_from_tables,
+    build_history_advisory_tables,
+)
 from src.eligibility import (
     DECISION_SUPPORT_NOTE,
     evaluate_batch_eligibility,
@@ -16,13 +22,13 @@ from src.eligibility import (
 from src.pipeline import run_pipeline
 from src.features import (
     build_feature_tables,
-    extract_features,
     extract_features_batch,
     extract_features_single_with_history,
 )
 from src.modeling import (
     DEFAULT_BLEND_WEIGHTS,
     build_primary_model_frame,
+    explain_prediction_with_model,
     load_bundle,
     score_features_with_model,
 )
@@ -52,6 +58,9 @@ logging.basicConfig(level=logging.INFO)
 
 DATA_PATH = "data/subsidies.xlsx"
 MODEL_PATH = "models/artifacts/subsidy_model.joblib"
+API_VERSION = "4.0.0"
+SCORING_ENGINE_NAME = "merit-ml-advisory-v4.0"
+RULE_ENGINE_NAME = "eligibility-rules-v4.0"
 
 
 def _load_model_bundle_if_available(model_path: str) -> dict | None:
@@ -74,7 +83,7 @@ def _load_model_bundle_if_available(model_path: str) -> dict | None:
 
 
 def _get_scoring_engine() -> str:
-    return "merit-ml-advisory-v3.2" if getattr(app.state, "model_bundle", None) else "eligibility-rules-v3.2"
+    return SCORING_ENGINE_NAME if getattr(app.state, "model_bundle", None) else RULE_ENGINE_NAME
 
 
 def _get_model_name() -> str | None:
@@ -82,6 +91,47 @@ def _get_model_name() -> str | None:
     if not bundle:
         return None
     return bundle.get("model_name")
+
+
+def _init_runtime_monitor() -> dict[str, object]:
+    return {
+        "score_requests_total": 0,
+        "rank_requests_total": 0,
+        "explain_requests_total": 0,
+        "score_latency_total_ms": 0.0,
+        "rank_latency_total_ms": 0.0,
+        "explain_latency_total_ms": 0.0,
+    }
+
+
+def _record_runtime_event(event_name: str, duration_ms: float) -> None:
+    monitor = getattr(app.state, "runtime_monitor", None)
+    if monitor is None:
+        return
+
+    key_map = {
+        "score": ("score_requests_total", "score_latency_total_ms"),
+        "rank": ("rank_requests_total", "rank_latency_total_ms"),
+        "explain": ("explain_requests_total", "explain_latency_total_ms"),
+    }
+    if event_name not in key_map:
+        return
+
+    count_key, latency_key = key_map[event_name]
+    monitor[count_key] = int(monitor.get(count_key, 0)) + 1
+    monitor[latency_key] = float(monitor.get(latency_key, 0.0)) + float(duration_ms)
+
+
+def _average_latency(event_name: str) -> float | None:
+    monitor = getattr(app.state, "runtime_monitor", None)
+    if monitor is None:
+        return None
+    count_key = f"{event_name}_requests_total"
+    latency_key = f"{event_name}_latency_total_ms"
+    count = int(monitor.get(count_key, 0))
+    if count <= 0:
+        return None
+    return round(float(monitor.get(latency_key, 0.0)) / count, 3)
 
 
 def _prepare_api_scores(
@@ -107,6 +157,7 @@ def _prepare_api_scores(
         rule_scores=rule_scores,
         blend_weights=model_bundle.get("blend_weights", DEFAULT_BLEND_WEIGHTS),
         decision_threshold=model_bundle.get("decision_threshold", 0.5),
+        probability_calibrator=model_bundle.get("probability_calibrator"),
         probability_temperature=model_bundle.get("probability_temperature", 1.0),
         disqualified_mask=rule_scores["disqualified"],
     )
@@ -129,11 +180,56 @@ def _single_risk_label(value: str) -> str:
     return str(value).lower()
 
 
+def _safe_feature_value(value):
+    if value is None or pd.isna(value):
+        return None
+    if isinstance(value, (int, float, np.floating, np.integer)):
+        return round(float(value), 4)
+    return str(value)
+
+
+def _format_ml_effect_label(name: str, value) -> str:
+    if value is None or pd.isna(value):
+        return name
+    if isinstance(value, (int, float, np.floating, np.integer)):
+        return f"{name} = {float(value):.4f}"
+    return f"{name} = {value}"
+
+
+def _build_model_factor_details(model_explanation: dict[str, object] | None) -> list[FactorDetail]:
+    if not model_explanation:
+        return []
+
+    factor_details: list[FactorDetail] = []
+    for item in model_explanation.get("feature_effects", [])[:10]:
+        contribution = float(item.get("score_impact", 0.0))
+        abs_contribution = abs(contribution)
+        if abs_contribution >= 8:
+            level = "высокий"
+        elif abs_contribution >= 3:
+            level = "средний"
+        else:
+            level = "низкий"
+
+        raw_value = _safe_feature_value(item.get("value"))
+        factor_details.append(
+            FactorDetail(
+                name=str(item.get("name")),
+                label=_format_ml_effect_label(str(item.get("name")), raw_value),
+                value=raw_value,
+                contribution=round(contribution, 2),
+                level=level,
+            )
+        )
+    return factor_details
+
+
 def _build_ml_explanation_lines(
     rule_score: float,
     ml_probability: float | None,
     ml_score: float | None,
     final_score: float,
+    model_explanation: dict[str, object] | None = None,
 ) -> list[str]:
     if ml_probability is None or ml_score is None:
         return []
@@ -146,14 +242,41 @@ def _build_ml_explanation_lines(
             f"Итоговый combined score: {final_score:.1f}/100 "
             f"(rule {weights['rule_score']:.0%}, ML {weights['ml_score']:.0%})"
         )
-    return [
-        (
-            f"Dual-branch ML-оценка итоговой силы заявки: {ml_probability:.1%} "
-            f"→ {ml_score:.1f}/100"
-        ),
+    lines = [
+        f"Primary ML-оценка итоговой силы заявки: {ml_probability:.1%} → {ml_score:.1f}/100",
         score_line,
         f"Rule-based diagnostic score: {rule_score:.1f}/100",
     ]
+    if model_explanation:
+        top_positive = [
+            item
+            for item in model_explanation.get("feature_effects", [])
+            if float(item.get("score_impact", 0.0)) > 0
+        ][:3]
+        top_negative = [
+            item
+            for item in model_explanation.get("feature_effects", [])
+            if float(item.get("score_impact", 0.0)) < 0
+        ][:3]
+        if top_positive:
+            lines.append(
+                "Главные положительные ML-сигналы: "
+                + "; ".join(
+                    f"{_format_ml_effect_label(str(item['name']), _safe_feature_value(item.get('value')))} "
+                    f"({float(item['score_impact']):+.1f} п.п.)"
+                    for item in top_positive
+                )
+            )
+        if top_negative:
+            lines.append(
+                "Главные сдерживающие ML-сигналы: "
+                + "; ".join(
+                    f"{_format_ml_effect_label(str(item['name']), _safe_feature_value(item.get('value')))} "
+                    f"({float(item['score_impact']):+.1f} п.п.)"
+                    for item in top_negative
+                )
+            )
+    return lines
 
 
 def _build_history_explanation_lines(history_payload: dict[str, object]) -> list[str]:
@@ -172,6 +295,25 @@ def _build_history_explanation_lines(history_payload: dict[str, object]) -> list
     if history_note:
         lines.append(str(history_note))
     return lines
+
+
+def _build_single_rule_scores_frame(
+    rule_result,
+    eligibility_payload: dict[str, object],
+) -> pd.DataFrame:
+    payload = {
+        "score": float(rule_result.score),
+        "risk_level": str(rule_result.risk_level).capitalize(),
+        "disqualified": bool(eligibility_payload["disqualified"]),
+        "disqualification_reason": eligibility_payload["disqualification_reason"],
+        "eligibility_status": str(eligibility_payload["eligibility_status"]),
+        "manual_review_required": bool(eligibility_payload["manual_review_required"]),
+        "eligibility_note": eligibility_payload["eligibility_note"],
+        "normative_reference_found": bool(eligibility_payload["normative_reference_found"]),
+    }
+    for factor_name, contribution in rule_result.factors.items():
+        payload[f"contrib_{factor_name}"] = float(contribution)
+    return pd.DataFrame([payload])
 
 
 def _score_single_payload(
@@ -209,19 +351,9 @@ def _score_single_payload(
     if not model_bundle:
         return payload
 
-    rule_scores_frame = pd.DataFrame(
-        [
-            {
-                "score": float(rule_result.score),
-                "risk_level": str(rule_result.risk_level).capitalize(),
-                "disqualified": bool(eligibility_payload["disqualified"]),
-                "disqualification_reason": eligibility_payload["disqualification_reason"],
-                "eligibility_status": str(eligibility_payload["eligibility_status"]),
-                "manual_review_required": bool(eligibility_payload["manual_review_required"]),
-                "eligibility_note": eligibility_payload["eligibility_note"],
-                "normative_reference_found": bool(eligibility_payload["normative_reference_found"]),
-            }
-        ]
+    rule_scores_frame = _build_single_rule_scores_frame(
+        rule_result=rule_result,
+        eligibility_payload=eligibility_payload,
     )
     blended_row = score_features_with_model(
         features_input=model_input,
@@ -229,6 +361,7 @@ def _score_single_payload(
         rule_scores=rule_scores_frame,
         blend_weights=model_bundle.get("blend_weights", DEFAULT_BLEND_WEIGHTS),
         decision_threshold=model_bundle.get("decision_threshold", 0.5),
+        probability_calibrator=model_bundle.get("probability_calibrator"),
         probability_temperature=model_bundle.get("probability_temperature", 1.0),
     ).iloc[0]
     payload["score"] = float(blended_row["score"])
@@ -324,16 +457,21 @@ async def lifespan(app: FastAPI):
     logger.info("Загрузка данных из %s ...", DATA_PATH)
     df = run_pipeline(DATA_PATH)
 
-    logger.info("Feature engineering v3.2 ...")
+    logger.info("Feature engineering v4.0 ...")
     tables = build_feature_tables(df)
     features = extract_features_batch(df, tables)
-    model_input = build_primary_model_frame(df, features)
     advisory = build_history_advisory_batch(df)
+    advisory_tables = build_history_advisory_tables(df)
     eligibility = evaluate_batch_eligibility(df, tables["normative_lookup"])
 
-    logger.info("Batch merit scoring v3.2 ...")
+    logger.info("Batch merit scoring v4.0 ...")
     rule_scores = score_batch(features)
     rule_scores[eligibility.columns] = eligibility
+    model_input = build_primary_model_frame(
+        raw_input=df,
+        extracted_features=features,
+        rule_scores=rule_scores,
+    )
     model_bundle = _load_model_bundle_if_available(MODEL_PATH)
     if model_bundle is None:
         raise RuntimeError(
@@ -348,15 +486,41 @@ async def lifespan(app: FastAPI):
     app.state.tables = tables
     app.state.features = features
     app.state.model_input = model_input
+    app.state.history_df = df.reindex(
+        columns=[
+            "app_number",
+            "region",
+            "district",
+            "direction",
+            "subsidy_type",
+            "akimat",
+            "status",
+            "normative",
+            "normative_original",
+            "amount",
+            "submit_date",
+            "submit_month",
+            "is_approved",
+        ]
+    ).copy()
     app.state.advisory = advisory
+    app.state.advisory_tables = advisory_tables
     app.state.scores = scores
     app.state.model_bundle = model_bundle
     app.state.model_path = MODEL_PATH
+    app.state.runtime_monitor = _init_runtime_monitor()
+    latest_submit_date = pd.to_datetime(df["submit_date"], errors="coerce").dropna()
+    app.state.default_request_year = (
+        int(latest_submit_date.max().year)
+        if not latest_submit_date.empty
+        else datetime.now().year
+    )
     app.state.blend_weights = (
         model_bundle.get("blend_weights", DEFAULT_BLEND_WEIGHTS)
         if model_bundle
         else DEFAULT_BLEND_WEIGHTS
     )
+    app.state.started_at = datetime.now().isoformat()
 
     logger.info(
         "Сервер готов: %d записей, средний балл %.1f, движок %s",
@@ -369,20 +533,21 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Subsidy Merit Scoring API v3.2",
+    title="Subsidy Merit Scoring API v4.0",
     description=(
         "AI-система merit-скоринга заявок на субсидирование "
         "сельхозпроизводителей Казахстана. "
-        "Primary ML использует dual-branch ensemble: context branch видит ограниченный "
-        "контекст заявки, включая region, а core branch получает region-neutral view и "
-        "делает более заявко-центричную оценку. Обучение опирается на historical outcome labels, "
-        "но approval-history не входит в runtime features primary model. "
-        "Исторический реестр используется как отдельный advisory-слой и не определяет итоговый score напрямую. "
+        "Primary ML использует нейросетевой merit scoring с time-aware feature engineering, "
+        "сжатыми региональными priors, нормативными сигналами и ограниченным набором "
+        "rule-derived признаков. Итоговый score строится как blend линейного rule-based "
+        "score и neural-network score. Вероятности калибруются через validation-based "
+        "calibrator без temperature-smoothing. Исторический реестр используется как "
+        "advisory-слой и как источник time-causal признаков для новых заявок. "
         "Просроченные дедлайны отсекаются eligibility-фильтром до ML. "
         "Система является инструментом поддержки решения и не заменяет установленный "
         "Правилами порядок рассмотрения заявки."
     ),
-    version="3.2.0",
+    version=API_VERSION,
     lifespan=lifespan,
 )
 
@@ -463,7 +628,7 @@ def _make_app_brief(row: pd.Series) -> ApplicationBrief:
     )
 
 
-def _build_factor_details(features_dict: dict, scoring_result) -> list[FactorDetail]:
+def _build_rule_factor_details(features_dict: dict, scoring_result) -> list[FactorDetail]:
     details = []
     sorted_factors = sorted(
         scoring_result.factors.items(), key=lambda x: x[1], reverse=True
@@ -480,7 +645,7 @@ def _build_factor_details(features_dict: dict, scoring_result) -> list[FactorDet
             FactorDetail(
                 name=name,
                 label=FACTOR_LABELS.get(name, name),
-                value=round(value, 4),
+                value=round(float(value), 4),
                 contribution=contribution,
                 level=level,
             )
@@ -511,9 +676,13 @@ def _group_stats(column: str) -> list[dict]:
 
 @app.get("/health", response_model=HealthResponse, tags=["Системные"])
 async def health_check():
-    model_report = (
-        getattr(app.state, "model_bundle", {}) or {}
-    ).get("report", {})
+    model_bundle = getattr(app.state, "model_bundle", {}) or {}
+    model_report = model_bundle.get("report", {})
+    validation_metrics = model_report.get("best_validation_metrics") or (
+        (model_report.get("model_validation_candidates") or [{}])[0]
+        .get("validation_metrics", {})
+    )
+    blend_weights = model_bundle.get("blend_weights", DEFAULT_BLEND_WEIGHTS)
     return HealthResponse(
         status="ok",
         version=app.version,
@@ -522,24 +691,46 @@ async def health_check():
         model_loaded=getattr(app.state, "model_bundle", None) is not None,
         model_name=_get_model_name(),
         model_path=app.state.model_path,
-        context_branch_model=model_report.get("context_branch_model_name"),
-        core_branch_model=model_report.get("core_branch_model_name"),
-        context_weight=model_report.get("ensemble_context_weight"),
-        core_weight=model_report.get("ensemble_core_weight"),
+        started_at=getattr(app.state, "started_at", None),
+        model_created_at=model_bundle.get("created_at"),
+        calibration_method=model_bundle.get("calibration_method"),
+        decision_threshold=_optional_float(model_bundle.get("decision_threshold")),
+        blend_rule_weight=_optional_float(blend_weights.get("rule_score")),
+        blend_ml_weight=_optional_float(blend_weights.get("ml_score")),
+        test_roc_auc=_optional_float(model_report.get("test_metrics", {}).get("roc_auc")),
+        validation_roc_auc=_optional_float(validation_metrics.get("roc_auc")),
+        region_sensitivity_mean_delta=_optional_float(
+            model_report.get("test_region_sensitivity", {}).get("mean_abs_delta")
+        ),
+        score_requests_total=int(getattr(app.state, "runtime_monitor", {}).get("score_requests_total", 0)),
+        rank_requests_total=int(getattr(app.state, "runtime_monitor", {}).get("rank_requests_total", 0)),
+        explain_requests_total=int(getattr(app.state, "runtime_monitor", {}).get("explain_requests_total", 0)),
+        avg_score_latency_ms=_average_latency("score"),
+        avg_rank_latency_ms=_average_latency("rank"),
+        avg_explain_latency_ms=_average_latency("explain"),
     )
 
 
 @app.post("/score", response_model=ScoreResponse, tags=["Скоринг"])
 async def score_application(request: ScoreRequest):
+    start_time = perf_counter()
     # скоринг одной заявки, норматив подставляется из справочника автоматически
     norm_lookup = app.state.tables["normative_lookup"]
     ref_norm = get_normative_for_type(request.subsidy_type, norm_lookup)
 
     # строим submit_date из месяца и дня
     try:
-        submit_date = datetime(2025, request.submit_month, request.submit_day)
+        submit_date = datetime(
+            int(getattr(app.state, "default_request_year", datetime.now().year)),
+            request.submit_month,
+            request.submit_day,
+        )
     except ValueError:
-        submit_date = datetime(2025, request.submit_month, 15)
+        submit_date = datetime(
+            int(getattr(app.state, "default_request_year", datetime.now().year)),
+            request.submit_month,
+            15,
+        )
 
     row = pd.Series(
         {
@@ -557,42 +748,65 @@ async def score_application(request: ScoreRequest):
 
     features_dict = extract_features_single_with_history(
         row=row,
-        history_df=app.state.df,
+        history_df=app.state.history_df,
         normative_lookup=norm_lookup,
+    )
+    eligibility_payload = evaluate_single_eligibility(row, norm_lookup)
+    history_payload = build_history_advisory_single_from_tables(
+        row,
+        app.state.advisory_tables,
+    )
+    rule_result = score_single(features_dict)
+    single_rule_scores = _build_single_rule_scores_frame(
+        rule_result=rule_result,
+        eligibility_payload=eligibility_payload,
     )
     model_input = build_primary_model_frame(
         raw_input=row,
         extracted_features=features_dict,
+        rule_scores=single_rule_scores,
     )
-    eligibility_payload = evaluate_single_eligibility(row, norm_lookup)
-    history_payload = build_history_advisory_single(row, app.state.df)
-    rule_result = score_single(features_dict)
     score_payload = _score_single_payload(
         model_input=model_input,
         rule_result=rule_result,
         eligibility_payload=eligibility_payload,
         history_payload=history_payload,
     )
-    explanation = list(rule_result.explanation)
-    explanation.insert(0, DECISION_SUPPORT_NOTE)
+    model_bundle = getattr(app.state, "model_bundle", None)
+    model_explanation = None
+    if model_bundle and not score_payload["disqualified"]:
+        model_explanation = explain_prediction_with_model(
+            features_input=model_input,
+            model=model_bundle["model"],
+            neutral_values=model_bundle.get("explanation_neutral_values"),
+            probability_calibrator=model_bundle.get("probability_calibrator"),
+            probability_temperature=model_bundle.get("probability_temperature"),
+        )
+    explanation = [DECISION_SUPPORT_NOTE]
     if score_payload["disqualified"] and score_payload["disqualification_reason"]:
         explanation.insert(
             0,
             f"✗ Заявка автоматически отклонена до ML-скоринга: {score_payload['disqualification_reason']}.",
         )
     elif score_payload["eligibility_note"]:
-        explanation.insert(1, str(score_payload["eligibility_note"]))
+        explanation.append(str(score_payload["eligibility_note"]))
     explanation.extend(
         _build_ml_explanation_lines(
             rule_score=score_payload["rule_score"],
             ml_probability=score_payload["ml_probability"],
             ml_score=score_payload["ml_score"],
             final_score=score_payload["score"],
+            model_explanation=model_explanation,
         )
     )
     explanation.extend(_build_history_explanation_lines(score_payload))
+    explanation.append("Rule-based diagnostic breakdown:")
+    explanation.extend(rule_result.explanation)
+    factor_details = _build_model_factor_details(model_explanation)
+    if not factor_details:
+        factor_details = _build_rule_factor_details(features_dict, rule_result)
 
-    return ScoreResponse(
+    response = ScoreResponse(
         score=score_payload["score"],
         risk_level=score_payload["risk_level"],
         rule_score=score_payload["rule_score"],
@@ -612,13 +826,16 @@ async def score_application(request: ScoreRequest):
         normative_reference_found=score_payload["normative_reference_found"],
         scoring_engine=score_payload["scoring_engine"],
         model_name=score_payload["model_name"],
-        factors=_build_factor_details(features_dict, rule_result),
+        factors=factor_details,
         explanation=explanation,
     )
+    _record_runtime_event("score", (perf_counter() - start_time) * 1000)
+    return response
 
 
 @app.post("/rank", response_model=RankResponse, tags=["Скоринг"])
 async def rank_applications(request: RankRequest):
+    start_time = perf_counter()
     combined = _get_combined()
     filtered = _apply_filters(
         combined,
@@ -633,17 +850,20 @@ async def rank_applications(request: RankRequest):
     total_filtered = len(filtered)
     top = filtered.head(request.top_n)
 
-    return RankResponse(
+    response = RankResponse(
         total_filtered=total_filtered,
         returned=len(top),
         scoring_engine=_get_scoring_engine(),
         model_name=_get_model_name(),
         applications=[_make_app_brief(row) for _, row in top.iterrows()],
     )
+    _record_runtime_event("rank", (perf_counter() - start_time) * 1000)
+    return response
 
 
 @app.get("/explain/{app_id}", response_model=ExplainResponse, tags=["Скоринг"])
 async def explain_score(app_id: str):
+    start_time = perf_counter()
     df = app.state.df
     match = df[df["app_number"].astype(str) == app_id]
     if match.empty:
@@ -654,30 +874,67 @@ async def explain_score(app_id: str):
     if idx in app.state.features.index:
         features_dict = app.state.features.loc[idx].to_dict()
     else:
-        features_dict = extract_features(row, app.state.tables)
+        features_dict = extract_features_single_with_history(
+            row=row,
+            history_df=app.state.history_df,
+            normative_lookup=app.state.tables["normative_lookup"],
+        )
 
     rule_result = score_single(features_dict)
     score_payload = _score_payload_from_index(idx, rule_result)
-    explanation = list(rule_result.explanation)
-    explanation.insert(0, DECISION_SUPPORT_NOTE)
+    model_bundle = getattr(app.state, "model_bundle", None)
+    model_explanation = None
+    if model_bundle and not score_payload["disqualified"]:
+        if idx in app.state.model_input.index:
+            explanation_features = app.state.model_input.loc[[idx]]
+        else:
+            explanation_features = build_primary_model_frame(
+                raw_input=row,
+                extracted_features=features_dict,
+                rule_scores=_build_single_rule_scores_frame(
+                    rule_result=rule_result,
+                    eligibility_payload={
+                        "disqualified": score_payload["disqualified"],
+                        "disqualification_reason": score_payload["disqualification_reason"],
+                        "eligibility_status": score_payload["eligibility_status"],
+                        "manual_review_required": score_payload["manual_review_required"],
+                        "eligibility_note": score_payload["eligibility_note"],
+                        "normative_reference_found": score_payload["normative_reference_found"],
+                    },
+                ),
+            )
+        model_explanation = explain_prediction_with_model(
+            features_input=explanation_features,
+            model=model_bundle["model"],
+            neutral_values=model_bundle.get("explanation_neutral_values"),
+            probability_calibrator=model_bundle.get("probability_calibrator"),
+            probability_temperature=model_bundle.get("probability_temperature"),
+        )
+    explanation = [DECISION_SUPPORT_NOTE]
     if score_payload["disqualified"] and score_payload["disqualification_reason"]:
         explanation.insert(
             0,
             f"✗ Заявка автоматически отклонена до ML-скоринга: {score_payload['disqualification_reason']}.",
         )
     elif score_payload["eligibility_note"]:
-        explanation.insert(1, str(score_payload["eligibility_note"]))
+        explanation.append(str(score_payload["eligibility_note"]))
     explanation.extend(
         _build_ml_explanation_lines(
             rule_score=score_payload["rule_score"],
             ml_probability=score_payload["ml_probability"],
             ml_score=score_payload["ml_score"],
             final_score=score_payload["score"],
+            model_explanation=model_explanation,
         )
     )
     explanation.extend(_build_history_explanation_lines(score_payload))
+    explanation.append("Rule-based diagnostic breakdown:")
+    explanation.extend(rule_result.explanation)
+    factor_details = _build_model_factor_details(model_explanation)
+    if not factor_details:
+        factor_details = _build_rule_factor_details(features_dict, rule_result)
 
-    return ExplainResponse(
+    response = ExplainResponse(
         app_number=str(row["app_number"]),
         region=str(row["region"]),
         direction=str(row["direction"]),
@@ -703,9 +960,11 @@ async def explain_score(app_id: str):
         normative_reference_found=score_payload["normative_reference_found"],
         scoring_engine=score_payload["scoring_engine"],
         model_name=score_payload["model_name"],
-        factors=_build_factor_details(features_dict, rule_result),
+        factors=factor_details,
         explanation=explanation,
     )
+    _record_runtime_event("explain", (perf_counter() - start_time) * 1000)
+    return response
 
 
 @app.get("/stats", response_model=StatsResponse, tags=["Аналитика"])

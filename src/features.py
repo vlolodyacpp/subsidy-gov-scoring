@@ -39,6 +39,21 @@ def _single_temporal_features(submit_date, submit_month: int | None = None) -> d
     }
 
 
+def _ratio_to_typicality(
+    ratio_like: pd.Series | np.ndarray,
+    neutral_value: float = 0.5,
+) -> pd.Series:
+    ratio_series = pd.to_numeric(
+        pd.Series(ratio_like),
+        errors="coerce",
+    ).replace([np.inf, -np.inf], np.nan)
+    ratio_series = ratio_series.clip(lower=1e-3)
+    log_distance = np.abs(np.log(ratio_series))
+    max_distance = float(np.log(4))
+    typicality = 1 - np.minimum(log_distance, max_distance) / max_distance
+    return typicality.fillna(neutral_value).astype(float)
+
+
 def compute_approval_rates(df: pd.DataFrame) -> dict:
     # вычисление процентов одобрений по направлениям, типам субсидий, акиматам, и кросс-метрик
     rates = {}
@@ -157,6 +172,16 @@ def compute_historical_amount_to_median_ratio(df: pd.DataFrame) -> pd.Series:
     return result.reindex(df.index).astype(float)
 
 
+def compute_historical_group_count(
+    df: pd.DataFrame,
+    group_cols: str | list[str],
+) -> pd.Series:
+    df_sorted = _sort_by_submit_order(df)
+    counts = df_sorted.groupby(group_cols, sort=False).cumcount().astype(float)
+    result = pd.Series(counts, index=df_sorted["_orig_index"])
+    return result.reindex(df.index).astype(float)
+
+
 def compute_budget_pressure(df: pd.DataFrame) -> pd.Series:
     # бюджетное давление без утечки в будущее:
     # используем только историю ранее поданных и ранее одобренных заявок
@@ -208,9 +233,17 @@ def extract_features(row: pd.Series, tables: dict) -> dict:
 
     # группа 1: нормативное соответствие
 
+    row_norm = pd.to_numeric(
+        pd.Series([row.get("normative", 0)]),
+        errors="coerce",
+    ).fillna(0.0).iloc[0]
+    original_norm = pd.to_numeric(
+        pd.Series([row.get("normative_original", row_norm)]),
+        errors="coerce",
+    ).fillna(row_norm).iloc[0]
+
     # normative_match
     ref_norm = get_normative_for_type(row["subsidy_type"], norm_lookup)
-    row_norm = row.get("normative", 0)
     if ref_norm is None:
         normative_match = 0.5
     elif row_norm == ref_norm:
@@ -219,6 +252,27 @@ def extract_features(row: pd.Series, tables: dict) -> dict:
         normative_match = 0.8
     else:
         normative_match = 0.0
+
+    if ref_norm is None:
+        normative_original_match = 0.5
+        normative_reference_gap = 1.0
+        normative_reference_typicality = 0.5
+    else:
+        original_deviation = abs(original_norm - ref_norm) / ref_norm if ref_norm > 0 else 1.0
+        normative_original_match = (
+            1.0
+            if original_deviation == 0
+            else 0.8
+            if original_deviation < 0.05
+            else 0.0
+        )
+        normative_reference_gap = float(np.clip(original_deviation, 0, 3))
+        normative_reference_typicality = float(
+            _ratio_to_typicality(
+                [original_norm / ref_norm if ref_norm > 0 else 1.0],
+                neutral_value=1.0,
+            ).iloc[0]
+        )
 
     # amount_normative_integrity
     effective_norm = ref_norm if ref_norm else row_norm
@@ -280,11 +334,31 @@ def extract_features(row: pd.Series, tables: dict) -> dict:
     else:
         unit_count_raw = 0
     unit_count_norm = 0.5  # для single scoring без batch-контекста
+    if original_norm and original_norm > 0:
+        unit_count_original_raw = row["amount"] / original_norm
+    else:
+        unit_count_original_raw = 0
     amount_to_type_median_ratio = row["amount"] / median_val if median_val > 0 else 1.0
     amount_log = float(np.log1p(max(row["amount"], 0)))
+    direction_history_count_log = float(
+        np.log1p(ar["direction"].get(row["direction"], {}).get("total_apps", 0))
+    )
+    subsidy_type_history_count_log = float(
+        np.log1p(ar["subsidy_type"].get(row["subsidy_type"], {}).get("total_apps", 0))
+    )
+    region_direction_history_count_log = float(
+        np.log1p(rd_data.get("total_apps", 0))
+    )
+    akimat_history_count_log = float(
+        np.log1p(akimat_data.get("total_apps", 0))
+    )
 
     return {
         "normative_match": normative_match,
+        "normative_original_match": float(normative_original_match),
+        "normative_original_log": float(np.log1p(max(original_norm, 0.0))),
+        "normative_reference_gap": normative_reference_gap,
+        "normative_reference_typicality": normative_reference_typicality,
         "amount_normative_integrity": amount_integrity,
         "amount_adequacy": amount_adequacy,
         "deadline_compliance": deadline_compliance,
@@ -297,7 +371,14 @@ def extract_features(row: pd.Series, tables: dict) -> dict:
         "direction_approval_rate": direction_rate,
         "subsidy_type_approval_rate": subsidy_rate,
         "region_approval_rate": region_rate,
+        "direction_history_count_log": direction_history_count_log,
+        "subsidy_type_history_count_log": subsidy_type_history_count_log,
+        "region_direction_history_count_log": region_direction_history_count_log,
+        "akimat_history_count_log": akimat_history_count_log,
         "amount_log": amount_log,
+        "unit_count_original_log": float(
+            np.log1p(np.clip(unit_count_original_raw, 0, 500))
+        ),
         "amount_to_type_median_ratio": float(np.clip(amount_to_type_median_ratio, 0, 5)),
         "submit_month_sin": temporal_features["submit_month_sin"],
         "submit_month_cos": temporal_features["submit_month_cos"],
@@ -318,7 +399,7 @@ def extract_features_single_with_history(
     request_row = pd.DataFrame(
         [
             {
-                "app_number": "__request__",
+                "app_number": "\uffff__request__",
                 "region": str(row_series.get("region", "")).strip(),
                 "district": str(row_series.get("district", "")).strip(),
                 "direction": str(row_series.get("direction", "")).strip(),
@@ -327,6 +408,12 @@ def extract_features_single_with_history(
                 "status": "Черновик",
                 "normative": pd.to_numeric(
                     pd.Series([row_series.get("normative")]), errors="coerce"
+                ).fillna(0).iloc[0],
+                "normative_original": pd.to_numeric(
+                    pd.Series(
+                        [row_series.get("normative_original", row_series.get("normative"))]
+                    ),
+                    errors="coerce",
                 ).fillna(0).iloc[0],
                 "amount": pd.to_numeric(
                     pd.Series([row_series.get("amount")]), errors="coerce"
@@ -387,6 +474,40 @@ def extract_features_batch(df: pd.DataFrame, tables: dict) -> pd.DataFrame:
                  np.where(close_match, 0.8, 0.0))
     )
 
+    original_norms = (
+        pd.to_numeric(df.get("normative_original", df["normative"]), errors="coerce")
+        .fillna(0.0)
+    )
+    original_deviation = pd.Series(
+        np.where(
+            ref_filled > 0,
+            np.abs(original_norms - ref_filled) / ref_filled,
+            np.nan,
+        ),
+        index=df.index,
+    ).replace([np.inf, -np.inf], np.nan)
+    features["normative_original_log"] = np.log1p(original_norms.clip(lower=0.0))
+    features["normative_reference_gap"] = (
+        original_deviation.fillna(1.0).clip(0, 3).astype(float)
+    )
+    features["normative_reference_typicality"] = _ratio_to_typicality(
+        (
+            (original_norms / ref_filled.replace(0, np.nan))
+            .replace([np.inf, -np.inf], np.nan)
+            .fillna(1.0)
+        ),
+        neutral_value=1.0,
+    ).reindex(df.index, fill_value=1.0)
+    features["normative_original_match"] = np.where(
+        ~has_ref,
+        0.5,
+        np.where(
+            original_deviation.fillna(1.0).eq(0),
+            1.0,
+            np.where(original_deviation.fillna(1.0) < 0.05, 0.8, 0.0),
+        ),
+    )
+
     # amount_normative_integrity
     effective_norm = np.where(ref_filled > 0, ref_filled, row_norms)
     effective_norm_safe = pd.Series(effective_norm, index=df.index).replace(0, np.nan)
@@ -416,6 +537,10 @@ def extract_features_batch(df: pd.DataFrame, tables: dict) -> pd.DataFrame:
     unit_scaled = (unit_raw_sorted / unit_hist_median).clip(0, 2) / 2
     features.loc[df_sorted["_orig_index"], "unit_count"] = unit_scaled.to_numpy()
     features["unit_count"] = features["unit_count"].fillna(0.5)
+    unit_count_original = (
+        df["amount"] / original_norms.replace(0, np.nan)
+    ).replace([np.inf, -np.inf], np.nan).fillna(0.0)
+    features["unit_count_original_log"] = np.log1p(unit_count_original.clip(0, 500))
     features.drop(columns=["_unit_count_raw"], inplace=True)
 
     # deadline_compliance
@@ -439,6 +564,18 @@ def extract_features_batch(df: pd.DataFrame, tables: dict) -> pd.DataFrame:
     )
     features["subsidy_type_approval_rate"] = compute_historical_approval_rate(
         df, "subsidy_type"
+    )
+    features["direction_history_count_log"] = np.log1p(
+        compute_historical_group_count(df, "direction")
+    )
+    features["subsidy_type_history_count_log"] = np.log1p(
+        compute_historical_group_count(df, "subsidy_type")
+    )
+    features["region_direction_history_count_log"] = np.log1p(
+        compute_historical_group_count(df, ["region", "direction"])
+    )
+    features["akimat_history_count_log"] = np.log1p(
+        compute_historical_group_count(df, "akimat")
     )
     features["amount_log"] = np.log1p(df["amount"].clip(lower=0))
     features["amount_to_type_median_ratio"] = compute_historical_amount_to_median_ratio(df)

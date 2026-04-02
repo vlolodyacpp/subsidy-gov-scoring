@@ -41,6 +41,40 @@ def _advisory_note(source: str, count: int, rate: float) -> str:
     )
 
 
+def build_history_advisory_tables(df: pd.DataFrame) -> dict[str, object]:
+    if df.empty:
+        return {
+            "exact": {},
+            "similar": {},
+            "global": {"count": 0, "rate": 0.5},
+        }
+
+    exact = (
+        df.groupby(["region", "direction", "subsidy_type"])["is_approved"]
+        .agg(["count", "mean"])
+        .rename(columns={"mean": "rate"})
+    )
+    similar = (
+        df.groupby(["direction", "subsidy_type"])["is_approved"]
+        .agg(["count", "mean"])
+        .rename(columns={"mean": "rate"})
+    )
+    return {
+        "exact": {
+            key: {"count": int(value["count"]), "rate": float(value["rate"])}
+            for key, value in exact.to_dict("index").items()
+        },
+        "similar": {
+            key: {"count": int(value["count"]), "rate": float(value["rate"])}
+            for key, value in similar.to_dict("index").items()
+        },
+        "global": {
+            "count": int(len(df)),
+            "rate": float(df["is_approved"].mean()),
+        },
+    }
+
+
 def build_history_advisory_batch(df: pd.DataFrame) -> pd.DataFrame:
     if df.empty:
         return pd.DataFrame(
@@ -109,6 +143,48 @@ def build_history_advisory_batch(df: pd.DataFrame) -> pd.DataFrame:
 
     result = advisory.set_index(df_sorted["_orig_index"])
     return result.reindex(df.index)
+
+
+def build_history_advisory_single_from_tables(
+    row: dict | pd.Series,
+    advisory_tables: dict[str, object],
+) -> dict[str, object]:
+    row_series = row if isinstance(row, pd.Series) else pd.Series(row)
+    exact_key = (
+        str(row_series.get("region", "")).strip(),
+        str(row_series.get("direction", "")).strip(),
+        str(row_series.get("subsidy_type", "")).strip(),
+    )
+    similar_key = (
+        str(row_series.get("direction", "")).strip(),
+        str(row_series.get("subsidy_type", "")).strip(),
+    )
+
+    exact = advisory_tables.get("exact", {}).get(exact_key)
+    similar = advisory_tables.get("similar", {}).get(similar_key)
+    global_entry = advisory_tables.get("global", {"count": 0, "rate": 0.5})
+
+    if exact and int(exact["count"]) >= 5:
+        source = "exact"
+        count = int(exact["count"])
+        rate = float(exact["rate"])
+    elif similar and int(similar["count"]) >= 10:
+        source = "similar"
+        count = int(similar["count"])
+        rate = float(similar["rate"])
+    else:
+        source = "global"
+        count = int(global_entry.get("count", 0))
+        rate = float(global_entry.get("rate", 0.5))
+
+    return {
+        "history_match_source": source,
+        "history_match_count": count,
+        "history_approval_rate": round(rate, 4),
+        "history_advisory_score": round(rate * 100, 1),
+        "history_recommendation": _advisory_label(rate, count),
+        "history_note": _advisory_note(source, count, rate),
+    }
 
 
 def build_history_advisory_single(

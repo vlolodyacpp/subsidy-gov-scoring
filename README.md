@@ -68,7 +68,7 @@ Excel registry
   Rule-based score и explainability.
 
 - `src/modeling.py`
-  Подготовка датасета, обучение dual-branch модели, калибровка, подбор порога, сохранение bundle.
+  Подготовка датасета, обучение single-model ML, калибровка, подбор порога и сохранение bundle.
 
 - `src/api.py`
   FastAPI-слой с endpoint-ами для скоринга, explainability и аналитики.
@@ -132,18 +132,17 @@ Excel registry
 
 ### 3. ML score
 
-ML-слой использует dual-branch primary model:
+ML-слой использует single-model neural-network primary scoring.
 
-- `context branch` на `RandomForest`
-  Видит ограниченный контекст заявки, включая `region`, `direction`, `subsidy_type`.
-- `core branch` на `LogisticRegression`
-  Видит ту же заявку, но в region-neutral представлении:
-  `region` зануляется, а `region_specialization` переводится в нейтральное значение.
+Сейчас production-конфигурация строится как связка `rule-based linear score + neural network`:
 
-Итоговая вероятность получается смешиванием обеих веток. Это сделано специально, чтобы:
+- линейный `rule_score` и ограниченный набор `contrib_*` как входы в нейросеть;
+- нормативные и amount-based сигналы заявки;
+- history-aware approval rates и historical counts;
+- process-context признаки `budget_pressure` и `queue_position`;
+- сжатые региональные priors вместо raw `region`.
 
-- не выбрасывать полезный региональный контекст полностью;
-- но и не позволять `region` доминировать над качеством самой заявки.
+Нейросеть обучается на этих признаках, а финальный `score` строится как blend rule-based и neural score. Вероятности проходят калибровку (`identity` / `sigmoid` / `isotonic` выбираются на validation).
 
 Готовый production bundle сохраняется в:
 
@@ -151,18 +150,19 @@ ML-слой использует dual-branch primary model:
 
 ### 4. Финальный score
 
-Для допустимых заявок итоговый `score` сейчас строится от primary dual-branch ML:
+Для допустимых заявок итоговый `score` сейчас строится от primary ML:
 
 `final_score = ml_score`
 
-`rule_score` остаётся в системе как диагностический и explainability-слой, а history advisory возвращается отдельно и не управляет финальным баллом напрямую.
+`rule_score` остаётся в системе как диагностический слой, а history advisory возвращается отдельно и не управляет финальным баллом напрямую.
 
 ## Explainability
 
 API возвращает:
 
-- factor contributions;
-- текстовое объяснение;
+- ML factor contributions для финального score;
+- текстовое объяснение по главным ML-сигналам;
+- rule-based diagnostics как отдельный appendix, а не как подмена ML explainability;
 - статус предварительной eligibility-проверки;
 - флаг `manual_review_required`.
 
@@ -203,7 +203,7 @@ Swagger UI:
   Пагинированный список заявок.
 
 - `GET /health`
-  Статус API и ML-модели, включая dual-branch конфигурацию.
+  Статус API и ML-модели, включая калибровку, порог и runtime-метрики.
 
 ## Установка и запуск
 
@@ -244,13 +244,15 @@ API:
 - API ожидает, что `models/artifacts/subsidy_model.joblib` уже существует;
 - если модель не обучена, сервер не стартует и попросит сначала выполнить `.venv/bin/python train.py`.
 
-## Что изменилось в v3.2
+## Что изменилось в v4.0
 
-- primary ML переведён на dual-branch архитектуру;
-- влияние `region` снижено: одна ветка модели принципиально не видит `region`;
-- выбор порога стал более recall-friendly;
-- historical advisory полностью отделён от финального decision score;
-- `/health` теперь показывает состав веток модели и их веса.
+- dual-branch архитектура удалена, а основной ML-пайплайн упрощён до single-model scoring;
+- в primary model добавлены нормативные, historical-count и rule-derived признаки;
+- региональные priors больше не подаются в сыром виде, а проходят shrink/transform перед ML;
+- вместо `temperature=4.0` используется selection policy между `identity`, `sigmoid` и `isotonic`;
+- explainability переведён на реальные ML feature effects, а rule-based блок остался только диагностикой;
+- single-request scoring строит time-causal признаки относительно даты заявки;
+- `/health` теперь отдаёт калибровку, порог, runtime-monitoring и training diagnostics.
 
 ## Что лежит в репозитории сейчас
 

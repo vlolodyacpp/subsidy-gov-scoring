@@ -39,6 +39,7 @@ def main():
         model=bundle["model"],
         blend_weights=bundle.get("blend_weights"),
         decision_threshold=bundle.get("decision_threshold", 0.5),
+        probability_calibrator=bundle.get("probability_calibrator"),
         probability_temperature=bundle.get("probability_temperature", 1.0),
     )
     from pathlib import Path

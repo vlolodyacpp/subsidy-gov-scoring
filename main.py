@@ -1,4 +1,4 @@
-"""CLI и API для merit scoring с dual-branch ML и отдельным historical advisory-слоем."""
+"""CLI и API для merit scoring с single-model ML и отдельным historical advisory-слоем."""
 import sys
 import argparse
 from pathlib import Path
@@ -22,7 +22,7 @@ def run_cli(data_path: str):
     )
 
     print("=" * 60)
-    print("SUBSIDY SCORING SYSTEM v3.2 (rule diagnostics + dual-branch merit ML)")
+    print("SUBSIDY SCORING SYSTEM v4.0 (rule diagnostics + single-model merit ML)")
     print("=" * 60)
 
     # 1. загрузка и очистка
@@ -75,7 +75,7 @@ def run_server(host: str = "0.0.0.0", port: int = 8000):
     import uvicorn
 
     print("=" * 60)
-    print("SUBSIDY SCORING API v3.2 (dual-branch merit ML + historical advisory)")
+    print("SUBSIDY SCORING API v4.0 (single-model merit ML + historical advisory)")
     print(f"Запуск на http://{host}:{port}")
     print(f"Swagger UI: http://{host}:{port}/docs")
     print("ML bundle path: models/artifacts/subsidy_model.joblib")
@@ -85,7 +85,7 @@ def run_server(host: str = "0.0.0.0", port: int = 8000):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Subsidy Scoring System v3.2")
+    parser = argparse.ArgumentParser(description="Subsidy Scoring System v4.0")
     parser.add_argument(
         "--serve",
         action="store_true",
