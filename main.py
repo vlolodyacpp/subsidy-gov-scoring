@@ -7,10 +7,6 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 DATA_PATH = "data/subsidies.xlsx"
 
-from src.pipeline import run_pipeline
-from src.features import build_feature_tables, extract_features_batch
-from src.scoring import score_batch, generate_shortlist, get_score_distribution, score_single
-
 
 def run_cli(data_path: str):
     """Запуск диагностического CLI-пайплайна rule-based скоринга."""

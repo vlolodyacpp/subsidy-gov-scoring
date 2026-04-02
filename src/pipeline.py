@@ -1,7 +1,7 @@
 # загрузка, очистка, подготовка данных
 import pandas as pd
 
-from src.normatives import build_normative_lookup, get_normative_for_type
+from src.normatives import build_normative_lookup, get_normative_for_type, check_deadline_compliance
 
 
 def load_raw_data(path: str) -> pd.DataFrame:
@@ -66,6 +66,12 @@ def clean_data(df: pd.DataFrame) -> pd.DataFrame:
     df = df[~df["status"].isin(exclude_statuses)].copy()
     n_excluded = n_before - len(df)
     print(f"  Исключено записей со статусом 'Отозвано': {n_excluded}")
+
+    # удаляем заявки с нарушением дедлайна подачи (по правилам они сразу отклоняются)
+    n_before = len(df)
+    df = df[df["submit_date"].apply(check_deadline_compliance) == 1.0].copy()
+    n_deadline = n_before - len(df)
+    print(f"  Исключено записей с нарушением дедлайна подачи: {n_deadline}")
 
     # бинарная целевая переменная
     df["is_approved"] = df["status"].isin(positive_statuses).astype(int)

@@ -4,7 +4,6 @@ import numpy as np
 from src.normatives import (
     build_normative_lookup,
     get_normative_for_type,
-    check_deadline_compliance,
 )
 
 
@@ -223,11 +222,53 @@ def compute_queue_position(df: pd.DataFrame) -> pd.Series:
 
 def build_feature_tables(df: pd.DataFrame) -> dict:
     # сборка справочных таблиц для скоринга
+    norm_lookup = build_normative_lookup()
+
+    # предрассчитанные контекстные данные для single scoring
+    # budget: одобренная сумма по (region, direction)
+    approved_totals = (
+        df[df["is_approved"] == 1]
+        .groupby(["region", "direction"])["amount"]
+        .sum()
+        .to_dict()
+    )
+    # budget: кумулятивная сумма всех запросов по (region, direction)
+    df_sorted = df.sort_values("submit_date")
+    cum_requested = df_sorted.groupby(["region", "direction"])["amount"].cumsum()
+    # для каждой группы: последнее значение = общий запрос
+    total_requested = (
+        df.groupby(["region", "direction"])["amount"]
+        .sum()
+        .to_dict()
+    )
+
+    # queue: размер каждой группы (region, direction, subsidy_type)
+    queue_group_sizes = (
+        df.groupby(["region", "direction", "subsidy_type"])
+        .size()
+        .to_dict()
+    )
+
+    # unit_count: значения по subsidy_type для перцентильного ранга
+    effective_norms = df["subsidy_type"].map(
+        lambda st: get_normative_for_type(st, norm_lookup) or 0
+    )
+    effective_norms = np.where(effective_norms > 0, effective_norms, df["normative"])
+    effective_norms = pd.Series(effective_norms, index=df.index).replace(0, np.nan)
+    unit_count_raw = df["amount"] / effective_norms.fillna(1)
+    unit_count_by_type = {}
+    for stype, group in unit_count_raw.groupby(df["subsidy_type"]):
+        unit_count_by_type[stype] = sorted(group.dropna().tolist())
+
     return {
         "approval_rates": compute_approval_rates(df),
         "amount_stats": compute_amount_stats(df),
         "region_specialization": compute_region_specialization(df),
-        "normative_lookup": build_normative_lookup(),
+        "normative_lookup": norm_lookup,
+        "approved_totals": approved_totals,
+        "total_requested": total_requested,
+        "queue_group_sizes": queue_group_sizes,
+        "unit_count_by_type": unit_count_by_type,
     }
 
 
@@ -297,7 +338,7 @@ def extract_features(row: pd.Series, tables: dict) -> dict:
     amount_zscore = abs(row["amount"] - median_val) / std_val if std_val > 0 else 0
     amount_adequacy = max(0, 1 - min(amount_zscore, 3) / 3)
 
-    # группа 2: сроки и бюджет   
+    # группа 2: сроки и бюджет
 
     # deadline_compliance
     submit_date = row.get("submit_date", None)
@@ -310,8 +351,12 @@ def extract_features(row: pd.Series, tables: dict) -> dict:
     # budget_pressure — для single scoring используем 0.5 (нет контекста очереди)
     budget_pressure = 0.5
 
-    # queue_position — для single scoring используем 0.5
-    queue_position = 0.5
+    # queue_position — позиция относительно существующей очереди
+    queue_group_sizes = tables.get("queue_group_sizes", {})
+    qp_key = (row["region"], row["direction"], row["subsidy_type"])
+    group_size = queue_group_sizes.get(qp_key, 0)
+    # новая заявка встаёт в конец очереди
+    queue_position = max(0.0, 1 - group_size / (group_size + 1)) if group_size > 0 else 0.5
 
     # группа 3: региональная специфика
 
@@ -335,7 +380,7 @@ def extract_features(row: pd.Series, tables: dict) -> dict:
     subsidy_rate = ar["subsidy_type"].get(row["subsidy_type"], {}).get("approval_rate", 0.5)
     region_rate = ar["region"].get(row["region"], {}).get("approval_rate", 0.5)
 
-    # unit_count (нормализованный через перцентиль — для single = 0.5)
+    # unit_count (перцентильный ранг относительно batch)
     if effective_norm and effective_norm > 0:
         unit_count_raw = row["amount"] / effective_norm
     else:
@@ -368,7 +413,6 @@ def extract_features(row: pd.Series, tables: dict) -> dict:
         "normative_reference_typicality": normative_reference_typicality,
         "amount_normative_integrity": amount_integrity,
         "amount_adequacy": amount_adequacy,
-        "deadline_compliance": deadline_compliance,
         "budget_pressure": budget_pressure,
         "queue_position": queue_position,
         "region_specialization": region_spec,
@@ -549,9 +593,6 @@ def extract_features_batch(df: pd.DataFrame, tables: dict) -> pd.DataFrame:
     ).replace([np.inf, -np.inf], np.nan).fillna(0.0)
     features["unit_count_original_log"] = np.log1p(unit_count_original.clip(0, 500))
     features.drop(columns=["_unit_count_raw"], inplace=True)
-
-    # deadline_compliance
-    features["deadline_compliance"] = df["submit_date"].apply(check_deadline_compliance)
 
     # budget_pressure
     features["budget_pressure"] = compute_budget_pressure(df)

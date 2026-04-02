@@ -89,6 +89,7 @@ class ApplicationBrief(BaseModel):
     direction: str
     subsidy_type: str
     amount: float
+    status: str
     score: float
     risk_level: str
     rule_score: Optional[float] = None
@@ -128,6 +129,8 @@ class ExplainResponse(BaseModel):
     subsidy_type: str
     amount: float
     status: str
+    normative: Optional[float] = Field(None, description="Норматив из заявки")
+    ref_normative: Optional[float] = Field(None, description="Эталонный норматив из справочника")
     score: float
     risk_level: str
     rule_score: Optional[float] = Field(None, description="Rule-based score")

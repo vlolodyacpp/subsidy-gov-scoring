@@ -1,0 +1,369 @@
+/* общие стили страницы */
+.block-container {
+    padding-top: 1rem;
+    padding-bottom: 4rem;
+}
+
+
+
+/* скрываем лишние элементы streamlit */
+#MainMenu {
+    visibility: hidden;
+}
+
+footer {
+    visibility: hidden;
+}
+
+header[data-testid="stHeader"] {
+    background: transparent !important;
+    background-color: transparent !important;
+}
+
+.stAppDeployButton {
+    display: none !important;
+}
+
+
+
+/* навигация страниц в сайдбаре */
+[data-testid="stSidebarNav"] a span {
+    font-size: 1.1rem !important;
+}
+
+/* sidebar */
+[data-testid="stSidebar"] {
+    padding-top: 0rem;
+}
+
+[data-testid="stSidebar"] h2 {
+    padding-top: 0;
+}
+
+[data-testid="stSidebarHeader"] {
+    margin-bottom: 0;
+    padding-top: 0;
+}
+
+[data-testid="stSidebarUserContent"] {
+    margin-top: -1rem;
+}
+
+[data-testid="stSlider"] [data-testid="stWidgetLabel"] {
+    margin-bottom: 1rem !important;
+}
+
+/* заголовок и подзаголовок */
+.main-title {
+    font-size: 2.4rem !important;
+    font-weight: 700 !important;
+    margin-bottom: 0.2rem;
+}
+
+.subtitle {
+    font-size: 1.1rem !important;
+    color: #a0a0b0;
+    margin-bottom: 1.5rem;
+}
+
+
+/* карточки метрик */
+[data-testid="stMetric"] {
+    background: #1a1a2e;
+    border: 1px solid #3a3a5a;
+    border-radius: 12px;
+    padding: 15px 20px;
+}
+
+[data-testid="stMetric"] label {
+    font-size: 0.95rem;
+    color: #8888aa;
+}
+
+[data-testid="stMetric"] [data-testid="stMetricValue"] {
+    font-size: 1.6rem;
+    font-weight: 700;
+}
+
+
+/* секции */
+.section-header {
+    font-size: 1.6rem !important;
+    font-weight: 700 !important;
+    margin-top: 2rem;
+    margin-bottom: 0.8rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 2px solid #30305a;
+}
+
+
+/* таблица */
+[data-testid="stDataFrame"] {
+    border-radius: 8px;
+}
+
+
+/* детали заявки */
+.detail-card {
+    background: #1a1a2e;
+    border: 1px solid #3a3a5a;
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-top: 0.8rem;
+}
+
+.detail-score {
+    font-size: 2.8rem;
+    font-weight: 800;
+    margin: 0;
+}
+
+.detail-score-label {
+    font-size: 0.95rem;
+    color: #8888aa;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 0.3rem;
+}
+
+.risk-badge {
+    display: inline-block;
+    padding: 6px 18px;
+    border-radius: 20px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-top: 0.5rem;
+}
+
+.risk-low {
+    background: rgba(45, 106, 79, 0.25);
+    color: #2d6a4f;
+    border: 1px solid #2d6a4f;
+}
+
+.risk-medium {
+    background: rgba(233, 196, 106, 0.2);
+    color: #e9c46a;
+    border: 1px solid #e9c46a;
+}
+
+.risk-high {
+    background: rgba(230, 57, 70, 0.2);
+    color: #e63946;
+    border: 1px solid #e63946;
+}
+
+.explanation-item {
+    background: #12121e;
+    border-left: 4px solid #3a3a5a;
+    border-radius: 0 8px 8px 0;
+    padding: 12px 20px;
+    margin-bottom: 12px;
+    font-size: 1.1rem;
+    line-height: 1.7;
+}
+
+
+.explanation-item.high {
+    border-left-color: #2d6a4f;
+}
+
+.explanation-item.medium {
+    border-left-color: #e9c46a;
+}
+
+.explanation-item.low {
+    border-left-color: #e63946;
+}
+
+.app-info-row {
+    display: flex;
+    gap: 2.5rem;
+    margin-top: 1.5rem;
+    margin-bottom: 3rem;
+    padding: 1rem 0;
+    color: #8888aa;
+    font-size: 1.05rem;
+}
+
+.app-info-row span {
+    color: #d0d0e0;
+    font-weight: 600;
+}
+
+/* detail header: score + info side by side */
+.detail-header {
+    display: flex;
+    gap: 1.2rem;
+    margin-bottom: 1rem;
+    align-items: stretch;
+}
+
+.detail-score-block {
+    background: #1a1a2e;
+    border: 1px solid #3a3a5a;
+    border-radius: 12px;
+    padding: 1.5rem;
+    min-width: 140px;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.detail-info-block {
+    background: #1a1a2e;
+    border: 1px solid #3a3a5a;
+    border-radius: 12px;
+    padding: 1rem 1.5rem;
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.detail-info-row {
+    display: flex;
+    gap: 2rem;
+}
+
+.detail-info-item {
+    flex-shrink: 0;
+}
+
+.detail-info-item.wide {
+    flex: 1;
+    min-width: 0;
+}
+
+.detail-info-label {
+    display: block;
+    font-size: 0.88rem;
+    color: #6a6a80;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 2px;
+}
+
+.detail-info-value {
+    display: block;
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: #d0d0e0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.explanation-header {
+    font-size: 1.3rem !important;
+    font-weight: 600 !important;
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+    color: #d0d0e0;
+}
+
+
+/* группы факторов — карточки */
+
+.group-card {
+    background: #1a1a2e;
+    border: 1px solid #3a3a5a;
+    border-radius: 12px;
+    padding: 1rem 1.2rem 0.6rem;
+    margin-bottom: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.group-card.high { border-left: 4px solid #2d6a4f; }
+.group-card.medium { border-left: 4px solid #e9c46a; }
+.group-card.low { border-left: 4px solid #e63946; }
+
+.group-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: #d0d0e0;
+    margin-bottom: 0.5rem;
+}
+
+.group-card-score {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #e0e0f0;
+}
+
+.group-card-bar-bg {
+    width: 100%;
+    height: 6px;
+    background: #2a2a40;
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 0.4rem;
+}
+
+.group-card-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.4s ease;
+}
+
+.group-card-bar-fill.high { background: #2d6a4f; }
+.group-card-bar-fill.medium { background: #e9c46a; }
+.group-card-bar-fill.low { background: #e63946; }
+
+.group-card-level {
+    font-size: 0.95rem;
+    color: #8888aa;
+    margin-bottom: 0.2rem;
+}
+
+
+/* факторы внутри группы */
+
+.factor-row {
+    background: #12121e;
+    border-radius: 8px;
+    padding: 0.5rem 1rem;
+    margin-bottom: 4px;
+}
+
+.factor-row-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.factor-row-label {
+    font-size: 1.0rem;
+    color: #b0b0c8;
+}
+
+.factor-row-value {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: #d0d0e0;
+}
+
+.factor-row-max {
+    font-weight: 400;
+    color: #6a6a80;
+    font-size: 0.95rem;
+}
+
+.factor-row-bar-bg {
+    width: 100%;
+    height: 4px;
+    background: #2a2a40;
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.factor-row-bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.4s ease;
+}
