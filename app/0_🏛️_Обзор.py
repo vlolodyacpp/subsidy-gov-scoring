@@ -9,34 +9,41 @@ from shared import (
     PLOTLY_LAYOUT,
     page_setup,
 )
-from api_client import get_factor_stats, check_health
+from api_client import get_factor_stats
 
 
 def _fmt(val, fmt=".1f"):
     return f"{val:{fmt}}" if val is not None else "—"
 
 
-def render_model_info():
-    health = check_health()
-    if not health:
+def render_quick_summary(stats: dict, rank_data: dict):
+    """Краткая сводка по текущей выборке."""
+    applications = rank_data.get("applications", [])
+    if not applications:
         return
 
-    model_name = health.get("model_name")
-    if not model_name:
-        st.caption("Движок: rule-based only")
-        return
+    st.markdown('<p class="section-header">📌 Сводка</p>', unsafe_allow_html=True)
 
-    blend_rule = health.get("blend_rule_weight", 0)
-    blend_ml = health.get("blend_ml_weight", 0)
-    threshold = health.get("decision_threshold")
-    test_auc = health.get("test_roc_auc")
+    # Средний балл по уровню риска
+    import collections
+    risk_scores = collections.defaultdict(list)
+    for app in applications:
+        risk_scores[app.get("risk_level", "—")].append(app["score"])
 
-    cols = st.columns(5)
-    cols[0].metric("Модель", model_name)
-    cols[1].metric("Rule вес", f"{blend_rule:.0%}" if blend_rule else "—")
-    cols[2].metric("ML вес", f"{blend_ml:.0%}" if blend_ml else "—")
-    cols[3].metric("Threshold", f"{threshold:.2f}" if threshold else "—")
-    cols[4].metric("Test ROC-AUC", f"{test_auc:.4f}" if test_auc else "—")
+    cols = st.columns(len(risk_scores))
+    for col, (risk, scores) in zip(cols, sorted(risk_scores.items())):
+        avg = sum(scores) / len(scores)
+        color = RISK_COLORS.get(risk, "#888")
+        col.markdown(
+            f'<div style="background:#1a1a2e;border:1px solid #3a3a5a;border-left:4px solid {color};'
+            f'border-radius:12px;padding:12px 16px;">'
+            f'<span style="font-size:0.85rem;color:#8888aa;text-transform:uppercase;">{risk} риск</span><br>'
+            f'<span style="font-size:1.8rem;font-weight:700;color:{color}">{avg:.1f}</span>'
+            f'<span style="font-size:0.9rem;color:#6a6a80"> ср. балл</span><br>'
+            f'<span style="font-size:0.95rem;color:#b0b0c8">{len(scores):,} заявок</span>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
 
 
 def render_metrics(stats: dict):
@@ -225,8 +232,8 @@ def main():
         unsafe_allow_html=True,
     )
 
-    render_model_info()
     render_metrics(stats)
+    render_quick_summary(stats, rank_data)
 
     col_left, col_right = st.columns(2)
     with col_left:

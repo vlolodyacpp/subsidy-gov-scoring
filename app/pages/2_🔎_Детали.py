@@ -4,7 +4,6 @@ import pandas as pd
 
 from shared import (
     WEIGHTS,
-    LEVEL_COLORS,
     DEFAULT_VALUE_FACTORS,
     PLOTLY_LAYOUT,
     page_setup,
@@ -136,7 +135,86 @@ ML_FACTOR_DESCRIPTIONS = {
     "submit_month": "Месяц подачи заявки (влияет на сезонность и бюджет).",
     "log_amount": "Логарифм запрашиваемой суммы (нормализация).",
     "amount_per_unit": "Сумма субсидии в расчёте на одну единицу.",
+    # расширенные фичи модели
+    "normative_log": "Логарифм нормативного значения — нормализация для модели.",
+    "normative_original_match": "Совпадение исходного норматива заявки с эталоном.",
+    "normative_reference_gap": "Отклонение заявленного норматива от эталонного значения.",
+    "normative_reference_typicality": "Насколько норматив типичен для данного типа субсидии.",
+    "unit_count_log": "Логарифм количества заявленных единиц.",
+    "unit_count_original_log": "Логарифм исходного количества единиц до нормализации.",
+    "submit_month_sin": "Сезонная компонента месяца подачи (синусоидальное кодирование).",
+    "region_approval_rate": "Общая доля одобренных заявок в данном регионе.",
+    "region_direction_lift": "Прирост одобряемости направления в регионе относительно среднего.",
+    "akimat_lift": "Прирост одобряемости акимата относительно среднего.",
+    "direction_history_count_log": "Объём истории заявок по данному направлению.",
+    "subsidy_type_history_count_log": "Объём истории заявок по данному типу субсидии.",
+    "region_direction_history_count_log": "Объём истории заявок данного направления в регионе.",
+    "akimat_history_count_log": "Объём истории заявок от данного акимата.",
+    "amount_to_normative_ratio": "Отношение запрашиваемой суммы к нормативу.",
+    "amount_to_type_median_ratio": "Отношение суммы к медиане по типу субсидии.",
+    "adequacy_x_direction_rate": "Взаимодействие адекватности суммы и одобряемости направления.",
+    "adequacy_x_budget_pressure": "Взаимодействие адекватности суммы и бюджетного давления.",
+    "rule_score_feature": "Суммарная оценка заявки по правилам, используемая как признак модели.",
+    "subsidy_type": "Тип субсидии (категориальный признак).",
 }
+
+# Русские названия для ML-факторов (фоллбэк, если API вернул английское имя)
+ML_FACTOR_LABELS = {
+    "normative_match": "Соответствие нормативу",
+    "amount_normative_integrity": "Корректность суммы",
+    "amount_adequacy": "Адекватность суммы",
+    "budget_pressure": "Бюджетное давление",
+    "queue_position": "Позиция в очереди",
+    "region_specialization": "Профильность региона",
+    "region_direction_approval_rate": "Одобряемость направления в регионе",
+    "akimat_approval_rate": "Одобрение акимата",
+    "unit_count": "Кол-во единиц",
+    "direction_approval_rate": "Одобряемость направления",
+    "subsidy_type_approval_rate": "Одобряемость типа субсидии",
+    "rule_score": "Оценка по правилам",
+    "contrib_budget_pressure": "Вклад бюджетного давления",
+    "contrib_region_direction_approval_rate": "Вклад одобряемости региона",
+    "contrib_normative_match": "Вклад соответствия нормативу",
+    "contrib_queue_position": "Вклад позиции в очереди",
+    "contrib_akimat_approval_rate": "Вклад одобрения акимата",
+    "contrib_amount_adequacy": "Вклад адекватности суммы",
+    "contrib_region_specialization": "Вклад специализации региона",
+    "contrib_amount_normative_integrity": "Вклад корректности расчёта",
+    "contrib_direction_approval_rate": "Вклад одобряемости направления",
+    "contrib_subsidy_type_approval_rate": "Вклад одобряемости типа субсидии",
+    "contrib_unit_count": "Вклад количества единиц",
+    "region_encoded": "Региональный код",
+    "direction_encoded": "Код направления",
+    "submit_month": "Месяц подачи",
+    "log_amount": "Размер суммы (лог.)",
+    "amount_per_unit": "Сумма на единицу",
+    # расширенные фичи модели
+    "normative_log": "Норматив (лог.)",
+    "normative_original_match": "Совпадение исходного норматива",
+    "normative_reference_gap": "Отклонение от эталонного норматива",
+    "normative_reference_typicality": "Типичность норматива",
+    "unit_count_log": "Кол-во единиц (лог.)",
+    "unit_count_original_log": "Исходное кол-во единиц (лог.)",
+    "submit_month_sin": "Сезонность подачи",
+    "region_approval_rate": "Одобряемость в регионе",
+    "region_direction_lift": "Эффект направления в регионе",
+    "akimat_lift": "Эффект акимата",
+    "direction_history_count_log": "История заявок по направлению",
+    "subsidy_type_history_count_log": "История заявок по типу субсидии",
+    "region_direction_history_count_log": "История заявок направления в регионе",
+    "akimat_history_count_log": "История заявок акимата",
+    "amount_to_normative_ratio": "Отношение суммы к нормативу",
+    "amount_to_type_median_ratio": "Отношение суммы к медиане типа",
+    "adequacy_x_direction_rate": "Адекватность × одобряемость направления",
+    "adequacy_x_budget_pressure": "Адекватность × бюджетное давление",
+    "rule_score_feature": "Оценка по правилам (фича)",
+    "subsidy_type": "Тип субсидии",
+}
+
+
+def _ml_label(mf: dict) -> str:
+    """Get Russian label for an ML factor — always prefer our dictionary."""
+    return ML_FACTOR_LABELS.get(mf["name"], mf.get("label", mf["name"]))
 
 
 def _score_verdict(score: float) -> str:
@@ -305,11 +383,11 @@ def render_details(detail: dict):
     st.markdown('<p class="section-header">📝 Почему такой балл?</p>', unsafe_allow_html=True)
 
     # Общий вердикт
-    st.markdown(f"""
-    <div class="verdict-card">
-        <div class="verdict-text">{_score_verdict(score)}</div>
-    </div>
-    """, unsafe_allow_html=True)
+    verdict_top = _score_verdict(score).replace("**", "")
+    st.markdown(
+        f'<div class="verdict-card"><div class="verdict-text">{verdict_top}</div></div>',
+        unsafe_allow_html=True,
+    )
 
     factors = detail.get("factors", [])
     ml_factors = detail.get("ml_factors", [])
@@ -438,7 +516,13 @@ def render_details(detail: dict):
                     for fd in group_factors_data:
                         w = WEIGHTS.get(fd["name"], 0) * 100
                         fill_pct = (fd["contribution"] / w * 100) if w > 0 else 0
-                        level_color = LEVEL_COLORS.get(fd["level"], "#888")
+                        # динамический цвет по заполненности
+                        if fill_pct >= 70:
+                            level_color = "#2d6a4f"  # зелёный
+                        elif fill_pct >= 40:
+                            level_color = "#e9c46a"  # жёлтый
+                        else:
+                            level_color = "#e63946"  # красный
                         raw_value = fd.get("value")
                         value_pct = f"{float(raw_value):.0%}" if raw_value is not None else "—"
 
@@ -484,25 +568,25 @@ def render_details(detail: dict):
                 ml_df = pd.DataFrame(ml_factors)
                 ml_df = ml_df[ml_df["contribution"] != 0].copy()
                 if not ml_df.empty:
-                    # Сортируем как в первом графике (от меньшего к большему по абсолютному значению или просто)
+                    # Русские метки для графика — всегда берём из словаря
+                    ml_df["ru_label"] = ml_df["name"].map(ML_FACTOR_LABELS).fillna(ml_df["label"])
                     ml_df["abs_contrib"] = ml_df["contribution"].abs()
                     ml_df = ml_df.sort_values("abs_contrib", ascending=True)
-                    
+
                     def get_ml_color(c):
-                        if c >= 1.0: return "#2d6a4f"     # высокий положительный (зеленый)
-                        elif c > 0: return "#e9c46a"      # средний/небольшой (желтый)
-                        else: return "#e63946"            # отрицательный (красный)
-                        
+                        if c >= 1.0: return "#2d6a4f"
+                        elif c > 0: return "#e9c46a"
+                        else: return "#e63946"
+
                     colors_ml = ml_df["contribution"].apply(get_ml_color).tolist()
-                    
+
                     fig_ml = go.Figure()
 
-                    # Псевдо-фон (визуально объединяет стиль с первой вкладкой)
                     max_abs = ml_df["abs_contrib"].max()
                     bg_x = [max_abs * 1.1 if c > 0 else -max_abs * 1.1 for c in ml_df["contribution"]]
-                    
+
                     fig_ml.add_trace(go.Bar(
-                        y=ml_df["label"],
+                        y=ml_df["ru_label"],
                         x=bg_x,
                         orientation="h",
                         name="Возможный разброс",
@@ -512,7 +596,7 @@ def render_details(detail: dict):
                     ))
 
                     fig_ml.add_trace(go.Bar(
-                        y=ml_df["label"],
+                        y=ml_df["ru_label"],
                         x=ml_df["contribution"],
                         orientation="h",
                         name="Фактический вклад",
@@ -536,13 +620,14 @@ def render_details(detail: dict):
                     st.markdown('<p class="ml-section-label">✅ Положительно повлияло на оценку ML</p>', unsafe_allow_html=True)
                     for mf in positive_ml:
                         impact = mf["contribution"]
+                        label = _ml_label(mf)
                         desc_text = ML_FACTOR_DESCRIPTIONS.get(mf["name"], "")
                         impact_bar_width = min(abs(impact) * 5, 100)
 
                         st.markdown(f"""
                         <div class="ml-factor-card positive">
                             <div class="ml-factor-header">
-                                <span class="ml-factor-label">{mf['label']}</span>
+                                <span class="ml-factor-label">{label}</span>
                                 <span class="ml-factor-impact positive">+{impact:.1f} б.</span>
                             </div>
                             <div class="ml-factor-bar-bg">
@@ -556,13 +641,14 @@ def render_details(detail: dict):
                     st.markdown('<p class="ml-section-label">⚠️ Отрицательно повлияло на оценку ML</p>', unsafe_allow_html=True)
                     for mf in negative_ml:
                         impact = mf["contribution"]
+                        label = _ml_label(mf)
                         desc_text = ML_FACTOR_DESCRIPTIONS.get(mf["name"], "")
                         impact_bar_width = min(abs(impact) * 5, 100)
 
                         st.markdown(f"""
                         <div class="ml-factor-card negative">
                             <div class="ml-factor-header">
-                                <span class="ml-factor-label">{mf['label']}</span>
+                                <span class="ml-factor-label">{label}</span>
                                 <span class="ml-factor-impact negative">{impact:.1f} б.</span>
                             </div>
                             <div class="ml-factor-bar-bg">
@@ -575,47 +661,79 @@ def render_details(detail: dict):
                 if neutral_ml:
                     with st.expander(f"Нейтральные факторы ({len(neutral_ml)})"):
                         for mf in neutral_ml:
+                            label = _ml_label(mf)
                             desc_text = ML_FACTOR_DESCRIPTIONS.get(mf["name"], "")
-                            st.markdown(f"**{mf['label']}** — {desc_text}" if desc_text else f"**{mf['label']}**")
+                            st.markdown(f"**{label}** — {desc_text}" if desc_text else f"**{label}**")
 
             else:
                 st.info("ML-модель не предоставила детализацию по факторам для данной заявки.")
 
     # --- подробное текстовое заключение для комиссии ---
     st.markdown('<p class="section-header">📜 Заключение для комиссии</p>', unsafe_allow_html=True)
-    st.info("Этот раздел написан простым языком и представляет выжимку сильных и слабых сторон заявки.")
-    
-    st.markdown(f"**Итоговый вердикт системы:** {_score_verdict(score)}")
-    
+
+    verdict = _score_verdict(score).replace("**", "")
+    st.markdown(
+        f'<div class="verdict-card"><div class="verdict-text">{verdict}</div></div>',
+        unsafe_allow_html=True,
+    )
+
+    # собираем данные по группам
+    strengths_html = ""
+    weaknesses_html = ""
+    for group_name, group_factor_names in FACTOR_GROUPS.items():
+        group_total = sum(f.get("contribution", 0) for f in factors if f["name"] in group_factor_names)
+        group_max = sum(WEIGHTS.get(fn, 0) * 100 for fn in group_factor_names)
+        group_pct = group_total / group_max if group_max > 0 else 0
+        icon = GROUP_ICONS.get(group_name, "📊")
+        narrative = _group_narrative(group_name, group_pct)
+        pct_display = f"{group_pct:.0%}"
+
+        if group_pct >= 0.7:
+            strengths_html += (
+                f'<div class="conclusion-item high">'
+                f'<div class="conclusion-item-header">'
+                f'<span>{icon} {group_name}</span>'
+                f'<span class="conclusion-item-pct" style="color:#2d6a4f">{pct_display}</span>'
+                f'</div>'
+                f'<div class="conclusion-item-text">{narrative}</div>'
+                f'</div>'
+            )
+        else:
+            level_cls = "medium" if group_pct >= 0.4 else "low"
+            color = "#e9c46a" if group_pct >= 0.4 else "#e63946"
+            weaknesses_html += (
+                f'<div class="conclusion-item {level_cls}">'
+                f'<div class="conclusion-item-header">'
+                f'<span>{icon} {group_name}</span>'
+                f'<span class="conclusion-item-pct" style="color:{color}">{pct_display}</span>'
+                f'</div>'
+                f'<div class="conclusion-item-text">{narrative}</div>'
+                f'</div>'
+            )
+
+    if not strengths_html:
+        strengths_html = '<div class="conclusion-empty">Явных сильных сторон по показателям не выявлено</div>'
+    if not weaknesses_html:
+        weaknesses_html = '<div class="conclusion-empty">Значительных зон риска не выявлено</div>'
+
     col_str, col_weak = st.columns(2)
-    
     with col_str:
-        st.markdown("#### ✅ Сильные стороны")
-        has_strengths = False
-        for group_name, group_factor_names in FACTOR_GROUPS.items():
-            group_total = sum(f.get("contribution", 0) for f in factors if f["name"] in group_factor_names)
-            group_max = sum(WEIGHTS.get(fn, 0) * 100 for fn in group_factor_names)
-            group_pct = group_total / group_max if group_max > 0 else 0
-            if group_pct >= 0.7:
-                has_strengths = True
-                narrative = _group_narrative(group_name, group_pct)
-                st.markdown(f"**{group_name}**:<br>{narrative}", unsafe_allow_html=True)
-        if not has_strengths:
-            st.markdown("— *Явных сильных сторон по показателям не выявлено*")
+        st.markdown(
+            f'<div class="conclusion-column">'
+            f'<div class="conclusion-title high">✅ Сильные стороны</div>'
+            f'{strengths_html}'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
 
     with col_weak:
-        st.markdown("#### ⚠️ Зоны риска")
-        has_weaknesses = False
-        for group_name, group_factor_names in FACTOR_GROUPS.items():
-            group_total = sum(f.get("contribution", 0) for f in factors if f["name"] in group_factor_names)
-            group_max = sum(WEIGHTS.get(fn, 0) * 100 for fn in group_factor_names)
-            group_pct = group_total / group_max if group_max > 0 else 0
-            if group_pct < 0.7:
-                has_weaknesses = True
-                narrative = _group_narrative(group_name, group_pct)
-                st.markdown(f"**{group_name}**:<br>{narrative}", unsafe_allow_html=True)
-        if not has_weaknesses:
-            st.markdown("— *Значительных зон риска не выявлено*")
+        st.markdown(
+            f'<div class="conclusion-column">'
+            f'<div class="conclusion-title warning">⚠️ Зоны риска</div>'
+            f'{weaknesses_html}'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
 
     explanation = detail.get("explanation", [])
     if explanation:
