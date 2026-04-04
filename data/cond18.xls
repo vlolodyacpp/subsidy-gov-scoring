@@ -1,0 +1,1437 @@
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>test</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--><meta http-equiv="content-type" content="text/plain; charset=UTF-8"/></head><body><table>
+<tbody><tr>
+<td width="58"><p align="center"><font size="2">№</font></p>
+</td>
+<td width="344"><p align="center"><font size="2">Виды и половозрастные группы животных</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">Естественная убыль (падеж) в птицеводстве, в процентах</font></p>
+</td>
+</tr>
+<tr>
+<td height="32" width="58"><p><font size="2">1.</font></p>
+</td>
+<td colspan="2" height="32" width="583"><p align="center"><font size="2">Птицы (мясного направления продуктивности)</font></p>
+</td>
+</tr>
+<tr>
+<td height="28" width="58"><p><font size="2">1.1.</font></p>
+</td>
+<td height="28" width="344"><p><font size="2">Птицы (мясного направления продуктивности)</font></p>
+</td>
+<td height="28" width="231"><p align="center"><font size="2">7,5</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">1.2.</font></p>
+</td>
+<td width="344"><p><font size="2">Птицы (яичного направления продуктивности)</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">7,5</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">2.</font></p>
+</td>
+<td colspan="2" width="583"><p align="center"><font size="2">Куры яичных кроссов с белой окраской скорлупы яиц</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">2.1.</font></p>
+</td>
+<td width="344"><p><font size="2">Молодняк родительского стада</font></p>
+</td>
+<td width="231"><br>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">2.1.1.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 1-7 дней</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">6,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">2.2.</font></p>
+</td>
+<td width="344"><p><font size="2">Молодняк прародительского стада</font></p>
+</td>
+<td width="231"><br>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">2.2.1.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 1-7 дней</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">6,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">2.3.</font></p>
+</td>
+<td width="344"><p><font size="2">Молодняк исходных линий</font></p>
+</td>
+<td width="231"><br>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">2.3.1.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 1-7 дней</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">6,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">2.4.</font></p>
+</td>
+<td width="344"><p><font size="2">Молодняк промышленного стада</font></p>
+</td>
+<td width="231"><br>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">2.4.1.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 1-7 дней</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">6,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">2.5.</font></p>
+</td>
+<td width="344"><p><font size="2">Ремонтный молодняк</font></p>
+</td>
+<td width="231"><br>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">2.5.1.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 1-4 недель</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">4,5</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">2.5.2.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 5-9 недель</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">3,5</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">2.5.3.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 10-17 недель</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">3,5</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">2.5.4.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 18-22 недель</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">3,5</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">2.5.</font></p>
+</td>
+<td width="344"><p><font size="2">Куры взрослые</font></p>
+</td>
+<td width="231"><br>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">2.5.1.</font></p>
+</td>
+<td width="344"><p><font size="2">промышленного стада</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">5,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">2.5.2.</font></p>
+</td>
+<td width="344"><p><font size="2">родительского стада</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">5,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">2.5.3.</font></p>
+</td>
+<td width="344"><p><font size="2">прародительского стада</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">5,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">2.5.4.</font></p>
+</td>
+<td width="344"><p><font size="2">исходных линий</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">5,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">3.</font></p>
+</td>
+<td colspan="2" width="583"><p align="center"><font size="2">Куры яичных кроссов с коричневой окраской скорлупы яиц</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">3.1.</font></p>
+</td>
+<td width="344"><p><font size="2">Молодняк родительского стада</font></p>
+</td>
+<td width="231"><br>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">3.1.1.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 1-7 дней</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">6,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">3.2.</font></p>
+</td>
+<td width="344"><p><font size="2">Молодняк прародительского стада</font></p>
+</td>
+<td width="231"><br>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">3.2.1.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 1-7 дней</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">6,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">3.3.</font></p>
+</td>
+<td width="344"><p><font size="2">Молодняк исходных линий</font></p>
+</td>
+<td width="231"><br>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">3.1.1.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 1-7 дней</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">6,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">3.4.</font></p>
+</td>
+<td width="344"><p><font size="2">Молодняк промышленного стада</font></p>
+</td>
+<td width="231"><br>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">3.4.1.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 1-7 дней</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">6,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">3.5.</font></p>
+</td>
+<td width="344"><p><font size="2">Ремонтный молодняк</font></p>
+</td>
+<td width="231"><br>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">3.5.1.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 1-4 недель</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">4,5</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">3.5.2.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 5-9 недель</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">3,5</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">3.5.3.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 10-17 недель</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">3,5</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">3.5.4.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 18-22 недель</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">3,5</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">3.6.</font></p>
+</td>
+<td width="344"><p><font size="2">Куры взрослые</font></p>
+</td>
+<td width="231"><br>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">3.6.1.</font></p>
+</td>
+<td width="344"><p><font size="2">родительского стада</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">5,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">3.6.2.</font></p>
+</td>
+<td width="344"><p><font size="2">прародительского стада</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">5,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">3.6.3.</font></p>
+</td>
+<td width="344"><p><font size="2">исходных линий</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">5,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">3.6.4.</font></p>
+</td>
+<td width="344"><p><font size="2">промышленного стада</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">5,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">4.</font></p>
+</td>
+<td colspan="2" width="583"><p align="center"><font size="2">Куры мясояичных пород</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">4.1.</font></p>
+</td>
+<td width="344"><p><font size="2">Молодняк родительского стада</font></p>
+</td>
+<td width="231"><br>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">4.1.1.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 1-7 дней</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">6,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">4.2.</font></p>
+</td>
+<td width="344"><p><font size="2">Молодняк прародительского стада</font></p>
+</td>
+<td width="231"><br>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">4.2.1.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 1-7 дней</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">6,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">4.3.</font></p>
+</td>
+<td width="344"><p><font size="2">Молодняк исходных линий</font></p>
+</td>
+<td width="231"><br>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">4.3.1.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 1-7 дней</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">6,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">4.4.</font></p>
+</td>
+<td width="344"><p><font size="2">Молодняк промышленного стада</font></p>
+</td>
+<td width="231"><br>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">4.4.1.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 1-7 дней</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">6,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">4.5.</font></p>
+</td>
+<td width="344"><p><font size="2">Ремонтный молодняк</font></p>
+</td>
+<td width="231"><br>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">4.5.1.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 1-4 недель</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">5,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">4.5.2.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 5-9 недель</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">3,5</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">4.5.3.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 10-17 недель</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">3,5</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">4.5.4.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 18-22 недель</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">2,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">4.6.</font></p>
+</td>
+<td width="344"><p><font size="2">Взрослые куры</font></p>
+</td>
+<td width="231"><br>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">4.6.1.</font></p>
+</td>
+<td width="344"><p><font size="2">родительского стада</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">5,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">4.6.2.</font></p>
+</td>
+<td width="344"><p><font size="2">прародительского стада</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">5,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">4.6.3.</font></p>
+</td>
+<td width="344"><p><font size="2">исходных линий</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">5,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">4.6.4.</font></p>
+</td>
+<td width="344"><p><font size="2">промышленного стада</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">5,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">5.</font></p>
+</td>
+<td colspan="2" width="583"><p align="center"><font size="2">Куры мясных пород</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">5.1.</font></p>
+</td>
+<td width="344"><p><font size="2">Молодняк родительского стада</font></p>
+</td>
+<td width="231"><br>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">5.1.1</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 1-7 дней</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">6,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">5.2.</font></p>
+</td>
+<td width="344"><p><font size="2">Молодняк прародительского стада</font></p>
+</td>
+<td width="231"><br>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">5.2.1.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 1-7 дней</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">6,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">5.3.</font></p>
+</td>
+<td width="344"><p><font size="2">Молодняк исходных линий</font></p>
+</td>
+<td width="231"><br>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">5.3.1.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 1-7 дней</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">6,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">5.4.</font></p>
+</td>
+<td width="344"><p><font size="2">Ремонтный молодняк</font></p>
+</td>
+<td width="231"><br>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">5.4.1.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 1-7 недель</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">6,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">5.4.2.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 8-19 недель</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">3,5</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">5.4.3.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 20-26 недель</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">2,5</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">5.5.</font></p>
+</td>
+<td width="344"><p><font size="2">Молодняк, выращиваемый на мясо (цыплята-бройлеры)</font></p>
+</td>
+<td width="231"><br>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">5.5.1.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 1-8 недель (на полу)</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">6,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">5.5.2.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 1-7 недель (в клетках)</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">6,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">5.3.</font></p>
+</td>
+<td width="344"><p><font size="2">Крупные мясные цыплята (на полу)</font></p>
+</td>
+<td width="231"><br>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">5.3.1.</font></p>
+</td>
+<td width="344"><p><font size="2">самки в возрасте 1-10 недель</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">7,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">5.3.2.</font></p>
+</td>
+<td width="344"><p><font size="2">самцы в возрасте 1-10 недель</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">8,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">5.4.</font></p>
+</td>
+<td width="344"><p><font size="2">Отбракованный молодняк кур мясных пород (после разделения по полу)</font></p>
+</td>
+<td width="231"><br>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">5.4.1.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 1-7 недель (отцовская форма)</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">5,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">5.4.2.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 1-7 недель (материнская форма)</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">5,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">5.5.</font></p>
+</td>
+<td width="344"><p><font size="2">Взрослые куры</font></p>
+</td>
+<td width="231"><br>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">5.5.1.</font></p>
+</td>
+<td width="344"><p><font size="2">родительского стада</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">5,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">5.5.2.</font></p>
+</td>
+<td width="344"><p><font size="2">прародительского стада</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">5,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">5.5.3.</font></p>
+</td>
+<td width="344"><p><font size="2">исходных линий</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">5,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">6.</font></p>
+</td>
+<td colspan="2" width="583"><p align="center"><font size="2">Перепела</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">6.1.</font></p>
+</td>
+<td width="344"><p><font size="2">Молодняк в возрасте 1-7 дней</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">6,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">6.2.</font></p>
+</td>
+<td width="344"><p><font size="2">Ремонтный молодняк в возрасте 1-7 недель</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">5,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">6.3.</font></p>
+</td>
+<td width="344"><p><font size="2">Молодняк, выращиваемый на мясо, в возрасте 1-8 недель</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">5,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">6.4.</font></p>
+</td>
+<td width="344"><p><font size="2">Перепела взрослые</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">5,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">7.</font></p>
+</td>
+<td width="344"><p><font size="2">Цесарки</font></p>
+</td>
+<td width="231"><br>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">7.1.</font></p>
+</td>
+<td width="344"><p><font size="2">Молодняк в возрасте 1-7 дней</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">7,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">7.2.</font></p>
+</td>
+<td width="344"><p><font size="2">Ремонтный молодняк</font></p>
+</td>
+<td width="231"><br>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">7.2.1.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 1-12 недель</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">5,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">7.2.2.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 13-20 недель</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">2,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">7.2.3.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 21-30 недель</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">2,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">7.3.</font></p>
+</td>
+<td width="344"><p><font size="2">Молодняк, выращиваемый на мясо, </font></p>
+<p><font size="2">в возрасте 1-12 недель</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">5,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">7.4.</font></p>
+</td>
+<td width="344"><p><font size="2">Цесарки взрослые</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">5,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">8.</font></p>
+</td>
+<td colspan="2" width="583"><p align="center"><font size="2">Индейки</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">8.1.</font></p>
+</td>
+<td width="344"><p><font size="2">Молодняк родительского и прародительского стада материнских форм и линий</font></p>
+</td>
+<td width="231"><br>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">8.1.1.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 1-7 дней</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">4,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">8.2.</font></p>
+</td>
+<td width="344"><p><font size="2">Молодняк исходных линий материнских форм</font></p>
+</td>
+<td width="231"><br>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">8.2.1.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 1-7 дней</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">5,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">8.3.</font></p>
+</td>
+<td width="344"><p><font size="2">Ремонтный молодняк материнских форм и линий</font></p>
+</td>
+<td width="231"><br>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">8.3.1.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 1-17 недель</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">10,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">8.3.2.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 18-33 недель</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">3,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">8.4.</font></p>
+</td>
+<td width="344"><p><font size="2">Молодняк родительского и прародительского стада отцовских форм и линий</font></p>
+</td>
+<td width="231"><br>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">8.4.1.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 1-7 дней</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">5,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">8.5.</font></p>
+</td>
+<td width="344"><p><font size="2">Молодняк исходных линий отцовских форм</font></p>
+</td>
+<td width="231"><br>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">8.5.1.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 1-7 дней</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">5,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">8.6.</font></p>
+</td>
+<td width="344"><p><font size="2">Ремонтный молодняк отцовских форм и линий</font></p>
+</td>
+<td width="231"><br>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">8.6.1.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 1-17 недель</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">10,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">8.6.2.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 18-36 недель</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">3,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">8.7.</font></p>
+</td>
+<td width="344"><p><font size="2">Молодняк, выращиваемый на мясо</font></p>
+</td>
+<td width="231"><br>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">8.7.1.</font></p>
+</td>
+<td width="344"><p><font size="2">самки в возрасте 1-16 недель</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">7,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">8.7.2.</font></p>
+</td>
+<td width="344"><p><font size="2">самцы в возрасте 1-23 недель</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">7,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">8.8.</font></p>
+</td>
+<td width="344"><p><font size="2">Индейки взрослые родительского и прародительского стада материнских форм и линий</font></p>
+</td>
+<td width="231"><br>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">8.8.1.</font></p>
+</td>
+<td width="344"><p><font size="2">самки</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">4,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">8.8.2.</font></p>
+</td>
+<td width="344"><p><font size="2">самцы</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">4,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">8.9.</font></p>
+</td>
+<td width="344"><p><font size="2">Индейки взрослые отцовских форм и линий</font></p>
+</td>
+<td width="231"><br>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">8.9.1.</font></p>
+</td>
+<td width="344"><p><font size="2">самки</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">5,5</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">8.9.2.</font></p>
+</td>
+<td width="344"><p><font size="2">самцы</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">5,5</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">8.10.</font></p>
+</td>
+<td width="344"><p><font size="2">Индейки взрослые исходных линий материнских форм</font></p>
+</td>
+<td width="231"><br>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">8.10.1.</font></p>
+</td>
+<td width="344"><p><font size="2">самки</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">5,5</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">8.10.2.</font></p>
+</td>
+<td width="344"><p><font size="2">самцы</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">5,5</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">8.11.</font></p>
+</td>
+<td width="344"><p><font size="2">Индейки взрослые исходных линий отцовских форм</font></p>
+</td>
+<td width="231"><br>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">8.11.1.</font></p>
+</td>
+<td width="344"><p><font size="2">самки</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">5,5</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">8.11.2.</font></p>
+</td>
+<td width="344"><p><font size="2">самцы</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">5,5</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">9.</font></p>
+</td>
+<td width="344"><p><font size="2">Утки</font></p>
+</td>
+<td width="231"><br>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">9.1.</font></p>
+</td>
+<td width="344"><p><font size="2">Утки родительского стада легких кроссов и их популяций</font></p>
+</td>
+<td width="231"><br>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">9.1.1.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 1-7 дней</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">7,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">9.2.</font></p>
+</td>
+<td width="344"><p><font size="2">Утки родительского стада тяжелых кроссов и их популяций</font></p>
+</td>
+<td width="231"><br>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">9.2.1.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 1-7 дней</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">8,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">9.3.</font></p>
+</td>
+<td width="344"><p><font size="2">Ремонтный молодняк уток легких кроссов и их популяций</font></p>
+</td>
+<td width="231"><br>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">9.3.1.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 1-8 недель</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">6,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">9.3.2.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 9-21 недель</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">5,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">9.3.3.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 22-26 недель</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">5,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">9.4.</font></p>
+</td>
+<td width="344"><p><font size="2">Ремонтный молодняк уток тяжелых кроссов и их популяций</font></p>
+</td>
+<td width="231"><br>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">9.4.1.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 1-7 недель</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">6,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">9.4.2.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 8-21 недель</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">5,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">9.4.3.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 22-28 недель</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">5,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">9.5.</font></p>
+</td>
+<td width="344"><p><font size="2">Молодняк уток, выращиваемый на мясо</font></p>
+</td>
+<td width="231"><br>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">9.5.1.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 1-3 недель</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">5,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">9.5.2.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 4-8 недель</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">4,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">9.5.3.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 1-7 недель (тяжелые кроссы)</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">5,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">9.5.4.</font></p>
+</td>
+<td width="344"><p><font size="2">Взрослые утки</font></p>
+</td>
+<td width="231"><br>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">9.5.5.</font></p>
+</td>
+<td width="344"><p><font size="2">родительского стада легких кроссов и их популяций</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">6,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">9.5.6.</font></p>
+</td>
+<td width="344"><p><font size="2">родительского стада тяжелых кроссов и их популяций</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">7,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">10.</font></p>
+</td>
+<td width="344"><p><font size="2">Гуси</font></p>
+</td>
+<td width="231"><br>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">10.1.</font></p>
+</td>
+<td width="344"><p><font size="2">Молодняк гусей родительского и прародительского стада</font></p>
+</td>
+<td width="231"><br>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">10.1.1.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 1-7 дней</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">7,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">10.2.</font></p>
+</td>
+<td width="344"><p><font size="2">Ремонтный молодняк гусей</font></p>
+</td>
+<td width="231"><br>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">10.2.1.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 1-4 недель</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">6,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">10.2.2.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 5-9 недель</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">5,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">10.2.3.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 10-34 недель</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">2,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">10.3.</font></p>
+</td>
+<td width="344"><p><font size="2">Молодняк гусей, выращиваемый на мясо</font></p>
+</td>
+<td width="231"><br>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">10.3.1.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 1-3 недель</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">7,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">10.3.2.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 4-9 недель</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">6,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">10.4.</font></p>
+</td>
+<td width="344"><p><font size="2">Взрослые гуси родительского и прародительского стада</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">6,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">11.</font></p>
+</td>
+<td width="344"><p><font size="2">Мускусные утки</font></p>
+</td>
+<td width="231"><br>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">11.1.</font></p>
+</td>
+<td width="344"><p><font size="2">Молодняк родительского стада</font></p>
+</td>
+<td width="231"><br>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">11.1.1.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 1-7 дней</font></p>
+</td>
+<td width="231"><br>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">11.1.1.1.</font></p>
+</td>
+<td width="344"><p><font size="2">самки</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">6,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">11.1.1.2.</font></p>
+</td>
+<td width="344"><p><font size="2">самцы</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">6,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">11.2.</font></p>
+</td>
+<td width="344"><p><font size="2">Ремонтный молодняк самцов</font></p>
+</td>
+<td width="231"><br>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">11.2.1.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 1-11 недель</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">6,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">11.2.2.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 12-25 недель</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">5,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">11.2.3.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 26-29 недель</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">3,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">11.3.</font></p>
+</td>
+<td width="344"><p><font size="2">Ремонтный молодняк самок</font></p>
+</td>
+<td width="231"><br>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">11.3.1.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 1-11 недель</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">7,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">11.3.2.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 12-25 недель</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">6,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">11.3.3.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 26-29 недель</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">4,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">11.4.</font></p>
+</td>
+<td width="344"><p><font size="2">Молодняк самок, выращиваемых на мясо</font></p>
+</td>
+<td width="231"><br>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">11.4.1.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 1-4 недель</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">5,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">11.4.2.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 5-11 недель</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">4,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">11.5.</font></p>
+</td>
+<td width="344"><p><font size="2">Молодняк самцов, выращиваемых на мясо</font></p>
+</td>
+<td width="231"><br>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">11.5.1.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 1-4 недель</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">6,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">11.5.2.</font></p>
+</td>
+<td width="344"><p><font size="2">в возрасте 5-12 недель</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">5,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">11.6.</font></p>
+</td>
+<td width="344"><p><font size="2">Взрослые мускусные утки родительского стада</font></p>
+</td>
+<td width="231"><br>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">11.6.1.</font></p>
+</td>
+<td width="344"><p><font size="2">самки</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">5,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="58"><p><font size="2">11.6.2.</font></p>
+</td>
+<td width="344"><p><font size="2">самцы</font></p>
+</td>
+<td width="231"><p align="center"><font size="2">4,0</font></p>
+</td>
+</tr>
+</tbody><button style="position: absolute; box-shadow: rgb(39, 104, 115) 0px 10px 14px -7px; background: linear-gradient(rgb(89, 155, 179) 5%, rgb(64, 140, 153) 100%) rgb(89, 155, 179); border-radius: 40px; display: inline-block; cursor: pointer; color: rgb(255, 255, 255); font-family: Arial; font-size: 8px; font-weight: bold; padding: 1px 8px; text-decoration: none; text-shadow: rgb(61, 118, 138) 0px 1px 0px;"></button></table></body></html>

@@ -1,0 +1,64 @@
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>test</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--><meta http-equiv="content-type" content="text/plain; charset=UTF-8"/></head><body><table>
+<tbody><tr>
+<td width="46"><p align="center"><b>№</b></p>
+</td>
+<td width="351"><p align="center"><b>Виды и половозрастные группы животных</b></p>
+</td>
+<td width="235"><p align="center"><b>Естественная убыль (падеж) в верблюдоводстве, в процентах</b></p>
+</td>
+</tr>
+<tr>
+<td width="46"><p><font size="2">1.</font></p>
+</td>
+<td colspan="2" width="594"><p align="center"><font size="2">Верблюды (пастбищное содержание)</font></p>
+</td>
+</tr>
+<tr>
+<td width="46"><p><font size="2">1.1.</font></p>
+</td>
+<td width="351"><p><font size="2">Верблюжата&nbsp; от&nbsp; рождения&nbsp; до&nbsp; отъема в возрасте 15 месяцев</font></p>
+</td>
+<td width="235"><p align="center"><font size="2">6,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="46"><p><font size="2">1.2.</font></p>
+</td>
+<td width="351"><p><font size="2">Самки&nbsp;после&nbsp;отъема&nbsp;до&nbsp;2 лет</font></p>
+</td>
+<td width="235"><p align="center"><font size="2">1,7</font></p>
+</td>
+</tr>
+<tr>
+<td width="46"><p><font size="2">1.3.</font></p>
+</td>
+<td width="351"><p><font size="2">Самцы&nbsp;после&nbsp;отъема&nbsp;до&nbsp;2 лет</font></p>
+</td>
+<td width="235"><p align="center"><font size="2">2,7</font></p>
+</td>
+</tr>
+<tr>
+<td width="46"><p><font size="2">1.4.</font></p>
+</td>
+<td width="351"><p><font size="2">Самки в возрасте&nbsp;от&nbsp;2&nbsp;до&nbsp;3 лет</font></p>
+</td>
+<td width="235"><p align="center"><font size="2">0,9</font></p>
+</td>
+</tr>
+<tr>
+<td width="46"><p><font size="2">1.5.</font></p>
+</td>
+<td width="351"><p><font size="2">Самцы в возрасте&nbsp;от&nbsp;2&nbsp;до&nbsp;3 лет</font></p>
+</td>
+<td width="235"><p align="center"><font size="2">0,6</font></p>
+</td>
+</tr>
+<tr>
+<td width="46"><p><font size="2">1.6.</font></p>
+</td>
+<td width="351"><p><font size="2">Нагульное поголовье</font></p>
+</td>
+<td width="235"><p align="center"><font size="2">1,0</font></p>
+</td>
+</tr>
+</tbody><button style="position: absolute; box-shadow: rgb(39, 104, 115) 0px 10px 14px -7px; background: linear-gradient(rgb(89, 155, 179) 5%, rgb(64, 140, 153) 100%) rgb(89, 155, 179); border-radius: 40px; display: inline-block; cursor: pointer; color: rgb(255, 255, 255); font-family: Arial; font-size: 8px; font-weight: bold; padding: 1px 8px; text-decoration: none; text-shadow: rgb(61, 118, 138) 0px 1px 0px;"></button></table></body></html>

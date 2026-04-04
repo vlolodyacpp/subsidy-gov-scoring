@@ -1,0 +1,120 @@
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>test</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--><meta http-equiv="content-type" content="text/plain; charset=UTF-8"/></head><body><table>
+<tbody><tr>
+<td width="46"><p align="center"><b>№</b></p>
+</td>
+<td width="351"><p align="center"><b>Виды и половозрастные группы животных</b></p>
+</td>
+<td width="235"><p align="center"><b>Естественная убыль (падеж) в звероводстве, в процентах</b></p>
+</td>
+</tr>
+<tr>
+<td width="46"><p><font size="2">1.</font></p>
+</td>
+<td colspan="2" width="594"><p align="center"><font size="2">Кролики</font></p>
+</td>
+</tr>
+<tr>
+<td width="46"><p><font size="2">1.1.</font></p>
+</td>
+<td width="351"><p><font size="2">Молодняк за период выращивания</font></p>
+</td>
+<td width="235"><p align="center"><font size="2">27</font></p>
+</td>
+</tr>
+<tr>
+<td width="46"><p><font size="2">1.2.</font></p>
+</td>
+<td width="351"><p><font size="2">Основное стадо</font></p>
+</td>
+<td width="235"><p align="center"><font size="2">0,65</font></p>
+</td>
+</tr>
+<tr>
+<td width="46"><p><font size="2">2.</font></p>
+</td>
+<td colspan="2" width="594"><p align="center"><font size="2">Норки</font></p>
+</td>
+</tr>
+<tr>
+<td width="46"><p><font size="2">2.1.</font></p>
+</td>
+<td width="351"><p><font size="2">Молодняк за период выращивания</font></p>
+</td>
+<td width="235"><p align="center"><font size="2">3,0</font></p>
+</td>
+</tr>
+<tr>
+<td width="46"><p><font size="2">2.2.</font></p>
+</td>
+<td width="351"><p><font size="2">Основное стадо</font></p>
+</td>
+<td width="235"><p align="center"><font size="2">0,5</font></p>
+</td>
+</tr>
+<tr>
+<td width="46"><p><font size="2">3.</font></p>
+</td>
+<td colspan="2" width="594"><p align="center"><font size="2">Песцы</font></p>
+</td>
+</tr>
+<tr>
+<td width="46"><p><font size="2">3.1.</font></p>
+</td>
+<td width="351"><p><font size="2">Молодняк за период выращивания</font></p>
+</td>
+<td width="235"><p align="center"><font size="2">2</font></p>
+</td>
+</tr>
+<tr>
+<td width="46"><p><font size="2">3.2.</font></p>
+</td>
+<td width="351"><p><font size="2">Основное стадо</font></p>
+</td>
+<td width="235"><p align="center"><font size="2">0,5</font></p>
+</td>
+</tr>
+<tr>
+<td width="46"><p><font size="2">4.</font></p>
+</td>
+<td colspan="2" width="594"><p align="center"><font size="2">Лисицы</font></p>
+</td>
+</tr>
+<tr>
+<td width="46"><p><font size="2">4.1.</font></p>
+</td>
+<td width="351"><p><font size="2">Молодняк за период выращивания</font></p>
+</td>
+<td width="235"><p align="center"><font size="2">2</font></p>
+</td>
+</tr>
+<tr>
+<td width="46"><p><font size="2">4.2.</font></p>
+</td>
+<td width="351"><p><font size="2">Основное стадо</font></p>
+</td>
+<td width="235"><p align="center"><font size="2">0,5</font></p>
+</td>
+</tr>
+<tr>
+<td width="46"><p><font size="2">5.</font></p>
+</td>
+<td colspan="2" width="594"><p align="center"><font size="2">Нутрии</font></p>
+</td>
+</tr>
+<tr>
+<td width="46"><p><font size="2">5.1.</font></p>
+</td>
+<td width="351"><p><font size="2">Молодняк за период выращивания</font></p>
+</td>
+<td width="235"><p align="center"><font size="2">8</font></p>
+</td>
+</tr>
+<tr>
+<td width="46"><p><font size="2">5.2.</font></p>
+</td>
+<td width="351"><p><font size="2">Основное стадо</font></p>
+</td>
+<td width="235"><p align="center"><font size="2">0,5</font></p>
+</td>
+</tr>
+</tbody><button style="position: absolute; box-shadow: rgb(39, 104, 115) 0px 10px 14px -7px; background: linear-gradient(rgb(89, 155, 179) 5%, rgb(64, 140, 153) 100%) rgb(89, 155, 179); border-radius: 40px; display: inline-block; cursor: pointer; color: rgb(255, 255, 255); font-family: Arial; font-size: 8px; font-weight: bold; padding: 1px 8px; text-decoration: none; text-shadow: rgb(61, 118, 138) 0px 1px 0px;"></button></table></body></html>
