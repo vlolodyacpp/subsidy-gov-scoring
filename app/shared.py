@@ -25,20 +25,27 @@ LEVEL_COLORS = {
 }
 
 WEIGHTS = {
-    "normative_match": 0.10,
-    "amount_normative_integrity": 0.08,
-    "amount_adequacy": 0.08,
-    "budget_pressure": 0.16,
-    "queue_position": 0.12,
-    "region_specialization": 0.10,
-    "region_direction_approval_rate": 0.13,
-    "akimat_approval_rate": 0.08,
-    "unit_count": 0.05,
-    "direction_approval_rate": 0.05,
-    "subsidy_type_approval_rate": 0.05,
+    "normative_match": 0.08,
+    "amount_normative_integrity": 0.06,
+    "amount_adequacy": 0.06,
+    "budget_pressure": 0.13,
+    "queue_position": 0.09,
+    "region_specialization": 0.07,
+    "region_direction_approval_rate": 0.08,
+    "akimat_approval_rate": 0.05,
+    "unit_count": 0.04,
+    "direction_approval_rate": 0.03,
+    "subsidy_type_approval_rate": 0.03,
+    "pasture_compliance": 0.08,
+    "mortality_compliance": 0.07,
+    "grazing_utilization": 0.05,
+    "criteria_complexity": 0.03,
+    "direction_risk": 0.03,
+    "regional_pasture_capacity": 0.02,
 }
 
-DEFAULT_VALUE_FACTORS = {"budget_pressure", "queue_position", "unit_count"}
+DEFAULT_VALUE_FACTORS = {"budget_pressure", "queue_position", "unit_count",
+                         "pasture_compliance", "mortality_compliance", "grazing_utilization"}
 
 PLOTLY_LAYOUT = dict(
     paper_bgcolor="rgba(0,0,0,0)",

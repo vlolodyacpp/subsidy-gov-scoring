@@ -1,11 +1,24 @@
 import pandas as pd
 import numpy as np
+import os
 
 from src.normatives import (
     build_normative_lookup,
     check_deadline_compliance,
     get_normative_for_type,
 )
+
+SYNTHETIC_FEATURES_PATH = "data/cleaned/synthetic_features.csv"
+
+# новые признаки из cond-файлов (все [0, 1])
+CONDITION_FEATURE_COLUMNS = [
+    "pasture_compliance",
+    "mortality_compliance",
+    "grazing_utilization",
+    "criteria_complexity",
+    "direction_risk",
+    "regional_pasture_capacity",
+]
 
 
 def _sort_by_submit_order(df: pd.DataFrame) -> pd.DataFrame:
@@ -221,6 +234,16 @@ def compute_queue_position(df: pd.DataFrame) -> pd.Series:
     return result.reindex(df.index).astype(float)
 
 
+def load_condition_features(path: str = SYNTHETIC_FEATURES_PATH) -> pd.DataFrame | None:
+    """Загружает condition-признаки из CSV (синтетические или реальные)."""
+    if not os.path.exists(path):
+        return None
+    cond = pd.read_csv(path)
+    # оставляем только app_number + итоговые признаки [0, 1]
+    keep = ["app_number"] + [c for c in CONDITION_FEATURE_COLUMNS if c in cond.columns]
+    return cond[keep]
+
+
 def build_feature_tables(df: pd.DataFrame) -> dict:
     # сборка справочных таблиц для скоринга
     norm_lookup = build_normative_lookup()
@@ -434,6 +457,14 @@ def extract_features(row: pd.Series, tables: dict) -> dict:
         "amount_to_type_median_ratio": float(np.clip(amount_to_type_median_ratio, 0, 5)),
         "submit_month_sin": temporal_features["submit_month_sin"],
         "submit_month_cos": temporal_features["submit_month_cos"],
+        # condition-признаки: для single scoring используем defaults (0.5),
+        # реальные значения подставляются через batch или API
+        "pasture_compliance": 0.5,
+        "mortality_compliance": 0.5,
+        "grazing_utilization": 0.5,
+        "criteria_complexity": 0.5,
+        "direction_risk": 0.5,
+        "regional_pasture_capacity": 0.5,
     }
 
 
@@ -634,5 +665,21 @@ def extract_features_batch(df: pd.DataFrame, tables: dict) -> pd.DataFrame:
     angle = 2 * np.pi * (submit_month - 1) / 12
     features["submit_month_sin"] = np.sin(angle)
     features["submit_month_cos"] = np.cos(angle)
+
+    # condition-признаки из cond-файлов (pasture, mortality, criteria и т.д.)
+    cond = load_condition_features()
+    if cond is not None and "app_number" in df.columns:
+        # нормализуем app_number: убираем ведущие нули для надёжного join
+        cond["app_number"] = cond["app_number"].astype(str).str.lstrip("0")
+        app_key = df["app_number"].astype(str).str.lstrip("0")
+        cond_indexed = cond.set_index("app_number")
+        for col in CONDITION_FEATURE_COLUMNS:
+            if col in cond_indexed.columns:
+                features[col] = app_key.map(cond_indexed[col]).fillna(0.5)
+            else:
+                features[col] = 0.5
+    else:
+        for col in CONDITION_FEATURE_COLUMNS:
+            features[col] = 0.5
 
     return features

@@ -2,26 +2,37 @@ import pandas as pd
 from dataclasses import dataclass
 
 
-# веса факторов v2 (сумма = 1.0)
+# веса факторов v3 (сумма = 1.0)
+# 17 факторов, 6 групп
 WEIGHTS = {
-    # группа 1: нормативное соответствие (26%)
-    "normative_match":              0.10,
-    "amount_normative_integrity":   0.08,
-    "amount_adequacy":              0.08,
+    # группа 1: нормативное соответствие (20%)
+    "normative_match":              0.08,
+    "amount_normative_integrity":   0.06,
+    "amount_adequacy":              0.06,
 
-    # группа 2: бюджет и очередь (28%)
-    "budget_pressure":              0.16,
-    "queue_position":               0.12,
+    # группа 2: бюджет и очередь (22%)
+    "budget_pressure":              0.13,
+    "queue_position":               0.09,
 
-    # группа 3: региональная специфика (31%)
-    "region_specialization":        0.10,
-    "region_direction_approval_rate": 0.13,
-    "akimat_approval_rate":         0.08,
+    # группа 3: региональная специфика (20%)
+    "region_specialization":        0.07,
+    "region_direction_approval_rate": 0.08,
+    "akimat_approval_rate":         0.05,
 
-    # группа 4: характеристики заявки (15%)
-    "unit_count":                   0.05,
-    "direction_approval_rate":      0.05,
-    "subsidy_type_approval_rate":   0.05,
+    # группа 4: характеристики заявки (10%)
+    "unit_count":                   0.04,
+    "direction_approval_rate":      0.03,
+    "subsidy_type_approval_rate":   0.03,
+
+    # группа 5: условия содержания (20%)
+    "pasture_compliance":           0.08,
+    "mortality_compliance":         0.07,
+    "grazing_utilization":          0.05,
+
+    # группа 6: регуляторная сложность (8%)
+    "criteria_complexity":          0.03,
+    "direction_risk":               0.03,
+    "regional_pasture_capacity":    0.02,
 }
 
 FACTOR_LABELS = {
@@ -36,6 +47,12 @@ FACTOR_LABELS = {
     "unit_count":                   "Количество заявленных единиц",
     "direction_approval_rate":      "Одобряемость направления",
     "subsidy_type_approval_rate":   "Одобряемость типа субсидии",
+    "pasture_compliance":           "Соответствие нагрузки на пастбища нормам",
+    "mortality_compliance":         "Соответствие падежа допустимым нормам",
+    "grazing_utilization":          "Использование пастбищного сезона",
+    "criteria_complexity":          "Простота регуляторной проверки",
+    "direction_risk":               "Биологическая безопасность направления",
+    "regional_pasture_capacity":    "Ресурсная ёмкость пастбищ региона",
 }
 
 # группировка факторов для объяснений
@@ -44,6 +61,8 @@ FACTOR_GROUPS = {
     "Бюджет и очередь": ["budget_pressure", "queue_position"],
     "Региональная специфика": ["region_specialization", "region_direction_approval_rate", "akimat_approval_rate"],
     "Характеристики заявки": ["unit_count", "direction_approval_rate", "subsidy_type_approval_rate"],
+    "Условия содержания": ["pasture_compliance", "mortality_compliance", "grazing_utilization"],
+    "Регуляторная сложность": ["criteria_complexity", "direction_risk", "regional_pasture_capacity"],
 }
 
 DEADLINE_DISQUALIFICATION_REASON = "Просрочен срок подачи заявки"
@@ -102,6 +121,16 @@ def score_single(features: dict) -> ScoringResult:
             "high": "параметры заявки характерны для успешных обращений",
             "medium": "параметры заявки в рамках нормы",
             "low": "параметры заявки нетипичны для одобряемых обращений",
+        },
+        "Условия содержания": {
+            "high": "нагрузка на пастбища и падёж в пределах допустимых норм",
+            "medium": "частичное соответствие нормам содержания животных",
+            "low": "показатели содержания существенно отклоняются от допустимых норм",
+        },
+        "Регуляторная сложность": {
+            "high": "направление и регион благоприятны с точки зрения регуляторных требований",
+            "medium": "умеренная регуляторная нагрузка на данный тип заявки",
+            "low": "высокая регуляторная сложность, повышенный биологический риск направления",
         },
     }
 
