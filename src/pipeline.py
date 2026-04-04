@@ -1,7 +1,5 @@
 # загрузка, очистка, подготовка данных
 import pandas as pd
-from pathlib import Path
-from datetime import datetime
 
 from src.normatives import build_normative_lookup, get_normative_for_type, check_deadline_compliance
 

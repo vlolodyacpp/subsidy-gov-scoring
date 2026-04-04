@@ -1,8 +1,12 @@
 pandas>=2.0         # Обработка данных
+numpy>=1.24         # Численные вычисления
 openpyxl>=3.1       # Чтение xlsx
-fastapi>=0.100      # REST API
-uvicorn[standard]>=0.23  # ASGI-сервер
 pydantic>=2.0       # Валидация данных
+fastapi>=0.110      # REST API
+uvicorn[standard]>=0.29  # ASGI-сервер
+scikit-learn>=1.4   # Обучение ML-модели
+catboost>=1.2       # Градиентный бустинг
+joblib>=1.3         # Сохранение модели
 httpx>=0.27         # HTTP-клиент для dashboard → API
 streamlit>=1.28     # Dashboard
 plotly>=5.15        # Визуализации

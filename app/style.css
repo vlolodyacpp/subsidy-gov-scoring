@@ -320,6 +320,77 @@ header[data-testid="stHeader"] {
     margin-bottom: 0.2rem;
 }
 
+.group-card-narrative {
+    font-size: 0.92rem;
+    color: #9898b0;
+    font-style: italic;
+    padding-top: 0.2rem;
+    padding-bottom: 0.3rem;
+    line-height: 1.4;
+}
+
+
+/* итоговые оценки — блок карточек */
+
+.scores-breakdown {
+    display: flex;
+    gap: 1rem;
+    margin: 1rem 0 1.2rem;
+}
+
+.score-card {
+    flex: 1;
+    background: #1a1a2e;
+    border: 1px solid #3a3a5a;
+    border-radius: 12px;
+    padding: 1.2rem 1.4rem;
+    text-align: center;
+}
+
+.score-card-label {
+    font-size: 0.9rem;
+    color: #8888aa;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.5rem;
+}
+
+.score-card-value {
+    font-size: 2.2rem;
+    font-weight: 800;
+    line-height: 1.1;
+    margin-bottom: 0.5rem;
+}
+
+.score-card-max {
+    font-size: 1rem;
+    font-weight: 400;
+    color: #6a6a80;
+}
+
+.score-card-desc {
+    font-size: 0.82rem;
+    color: #7878a0;
+    line-height: 1.3;
+}
+
+
+/* вердикт */
+
+.verdict-card {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    border: 1px solid #3a3a5a;
+    border-radius: 12px;
+    padding: 1rem 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.verdict-text {
+    font-size: 1.1rem;
+    color: #d0d0e0;
+    line-height: 1.6;
+}
+
 
 /* факторы внутри группы */
 
@@ -366,4 +437,202 @@ header[data-testid="stHeader"] {
     height: 100%;
     border-radius: 2px;
     transition: width 0.4s ease;
+}
+
+
+/* карточки отдельных факторов (детали) */
+
+.factor-detail-card {
+    background: #12121e;
+    border-radius: 8px;
+    padding: 0.7rem 1rem;
+    margin-bottom: 6px;
+}
+
+.factor-detail-assessment {
+    font-size: 0.92rem;
+    color: #b0b0c8;
+    margin-top: 6px;
+    line-height: 1.5;
+}
+
+.factor-detail-what {
+    font-size: 0.82rem;
+    color: #7878a0;
+    margin-top: 2px;
+    line-height: 1.4;
+    font-style: italic;
+}
+
+
+/* ML-вкладка: стили */
+
+.ml-intro-card {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    border: 1px solid #3a3a5a;
+    border-radius: 12px;
+    padding: 1rem 1.5rem;
+    margin-bottom: 1.2rem;
+}
+
+.ml-intro-text {
+    font-size: 1rem;
+    color: #b0b0c8;
+    line-height: 1.6;
+}
+
+.ml-section-label {
+    font-size: 1.15rem !important;
+    font-weight: 600 !important;
+    color: #d0d0e0;
+    margin-top: 1.2rem;
+    margin-bottom: 0.6rem;
+}
+
+.ml-factor-card {
+    background: #1a1a2e;
+    border: 1px solid #3a3a5a;
+    border-radius: 10px;
+    padding: 0.8rem 1.1rem;
+    margin-bottom: 8px;
+}
+
+.ml-factor-card.positive {
+    border-left: 4px solid #2d6a4f;
+}
+
+.ml-factor-card.negative {
+    border-left: 4px solid #e63946;
+}
+
+.ml-factor-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.ml-factor-label {
+    font-size: 1rem;
+    color: #d0d0e0;
+    font-weight: 500;
+}
+
+.ml-factor-impact {
+    font-size: 1.05rem;
+    font-weight: 700;
+}
+
+.ml-factor-impact.positive {
+    color: #2d6a4f;
+}
+
+.ml-factor-impact.negative {
+    color: #e63946;
+}
+
+.ml-factor-bar-bg {
+    width: 100%;
+    height: 5px;
+    background: #2a2a40;
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 6px;
+}
+
+.ml-factor-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.4s ease;
+}
+
+.ml-factor-bar-fill.positive {
+    background: #2d6a4f;
+}
+
+.ml-factor-bar-fill.negative {
+    background: #e63946;
+}
+
+.ml-factor-desc {
+    font-size: 0.85rem;
+    color: #7878a0;
+    line-height: 1.4;
+    font-style: italic;
+}
+
+
+/* заключение для комис��ии */
+
+.conclusion-column {
+    background: #1a1a2e;
+    border: 1px solid #3a3a5a;
+    border-radius: 12px;
+    padding: 1rem 1.2rem;
+    min-height: 160px;
+}
+
+.conclusion-title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    margin-bottom: 0.8rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid #30305a;
+    color: #d0d0e0;
+}
+
+.conclusion-title.high {
+    border-bottom-color: #2d6a4f;
+}
+
+.conclusion-title.warning {
+    border-bottom-color: #e9c46a;
+}
+
+.conclusion-item {
+    background: #12121e;
+    border-radius: 8px;
+    padding: 0.7rem 1rem;
+    margin-bottom: 8px;
+    border-left: 4px solid #3a3a5a;
+}
+
+.conclusion-item.high {
+    border-left-color: #2d6a4f;
+}
+
+.conclusion-item.medium {
+    border-left-color: #e9c46a;
+}
+
+.conclusion-item.low {
+    border-left-color: #e63946;
+}
+
+.conclusion-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #d0d0e0;
+    margin-bottom: 4px;
+}
+
+.conclusion-item-pct {
+    font-weight: 700;
+    font-size: 1rem;
+}
+
+.conclusion-item-text {
+    font-size: 0.88rem;
+    color: #9898b0;
+    line-height: 1.5;
+}
+
+.conclusion-empty {
+    font-size: 0.92rem;
+    color: #6a6a80;
+    font-style: italic;
+    padding: 0.5rem 0;
 }

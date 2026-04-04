@@ -16,6 +16,36 @@ def _fmt(val, fmt=".1f"):
     return f"{val:{fmt}}" if val is not None else "—"
 
 
+def render_quick_summary(stats: dict, rank_data: dict):
+    """Краткая сводка по текущей выборке."""
+    applications = rank_data.get("applications", [])
+    if not applications:
+        return
+
+    st.markdown('<p class="section-header">📌 Сводка</p>', unsafe_allow_html=True)
+
+    # Средний балл по уровню риска
+    import collections
+    risk_scores = collections.defaultdict(list)
+    for app in applications:
+        risk_scores[app.get("risk_level", "—")].append(app["score"])
+
+    cols = st.columns(len(risk_scores))
+    for col, (risk, scores) in zip(cols, sorted(risk_scores.items())):
+        avg = sum(scores) / len(scores)
+        color = RISK_COLORS.get(risk, "#888")
+        col.markdown(
+            f'<div style="background:#1a1a2e;border:1px solid #3a3a5a;border-left:4px solid {color};'
+            f'border-radius:12px;padding:12px 16px;">'
+            f'<span style="font-size:0.85rem;color:#8888aa;text-transform:uppercase;">{risk} риск</span><br>'
+            f'<span style="font-size:1.8rem;font-weight:700;color:{color}">{avg:.1f}</span>'
+            f'<span style="font-size:0.9rem;color:#6a6a80"> ср. балл</span><br>'
+            f'<span style="font-size:0.95rem;color:#b0b0c8">{len(scores):,} заявок</span>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+
+
 def render_metrics(stats: dict):
     st.markdown('<p class="section-header">📊 Ключевые метрики</p>', unsafe_allow_html=True)
 
@@ -121,7 +151,6 @@ def render_charts(applications: list[dict]):
 
 
 def render_factor_distributions(filters: dict):
-    """Средние значения каждого фактора — bar chart."""
     st.markdown('<p class="section-header">📊 Средние значения факторов</p>', unsafe_allow_html=True)
 
     factor_data = get_factor_stats(
@@ -204,6 +233,7 @@ def main():
     )
 
     render_metrics(stats)
+    render_quick_summary(stats, rank_data)
 
     col_left, col_right = st.columns(2)
     with col_left:

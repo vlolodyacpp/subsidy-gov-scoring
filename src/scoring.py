@@ -1,5 +1,4 @@
 import pandas as pd
-import numpy as np
 from dataclasses import dataclass
 
 
@@ -10,14 +9,14 @@ WEIGHTS = {
     "amount_normative_integrity":   0.08,
     "amount_adequacy":              0.08,
 
-    # группа 2: сроки и бюджет (30%)
+    # группа 2: бюджет и очередь (28%)
     "budget_pressure":              0.16,
-    "queue_position":               0.14,
+    "queue_position":               0.12,
 
-    # группа 3: региональная специфика (29%)
+    # группа 3: региональная специфика (31%)
     "region_specialization":        0.10,
-    "region_direction_approval_rate": 0.12,
-    "akimat_approval_rate":         0.07,
+    "region_direction_approval_rate": 0.13,
+    "akimat_approval_rate":         0.08,
 
     # группа 4: характеристики заявки (15%)
     "unit_count":                   0.05,
@@ -42,10 +41,12 @@ FACTOR_LABELS = {
 # группировка факторов для объяснений
 FACTOR_GROUPS = {
     "Нормативное соответствие": ["normative_match", "amount_normative_integrity", "amount_adequacy"],
-    "Сроки и бюджет": ["budget_pressure", "queue_position"],
+    "Бюджет и очередь": ["budget_pressure", "queue_position"],
     "Региональная специфика": ["region_specialization", "region_direction_approval_rate", "akimat_approval_rate"],
     "Характеристики заявки": ["unit_count", "direction_approval_rate", "subsidy_type_approval_rate"],
 }
+
+DEADLINE_DISQUALIFICATION_REASON = "Просрочен срок подачи заявки"
 
 
 @dataclass
@@ -56,8 +57,17 @@ class ScoringResult:
     risk_level: str                 # низкий / средний / высокий
 
 
+def get_disqualification_reason(features: dict | pd.Series) -> str | None:
+    deadline_value = features.get("deadline_compliance", 0.5)
+    if pd.isna(deadline_value):
+        return None
+    if float(deadline_value) <= 0:
+        return DEADLINE_DISQUALIFICATION_REASON
+    return None
+
+
 def score_single(features: dict) -> ScoringResult:
-    # скоринг одной заявки с объяснением по 12 факторам
+    # скоринг одной допустимой заявки с explainability по rule-факторам
     factors = {}
     raw_score = 0.0
 
@@ -69,8 +79,32 @@ def score_single(features: dict) -> ScoringResult:
 
     score = round(min(max(raw_score, 0), 100), 1)
 
-    # генерация объяснений по группам
+    # генерация объяснений по группам — человечным языком
     explanation = []
+
+    GROUP_DESCRIPTIONS = {
+        "Нормативное соответствие": {
+            "high": "документы полностью соответствуют установленным правилам",
+            "medium": "есть незначительные расхождения с нормативами",
+            "low": "выявлены существенные расхождения с эталонными нормативами",
+        },
+        "Бюджет и очередь": {
+            "high": "заявка подана в благоприятный период, конкуренция невысокая",
+            "medium": "средняя конкуренция за бюджетные средства",
+            "low": "высокая конкуренция или поздняя подача заявки",
+        },
+        "Региональная специфика": {
+            "high": "направление хорошо развито в регионе, высокая одобряемость",
+            "medium": "направление умеренно представлено в регионе",
+            "low": "направление нетипично для данного региона",
+        },
+        "Характеристики заявки": {
+            "high": "параметры заявки характерны для успешных обращений",
+            "medium": "параметры заявки в рамках нормы",
+            "low": "параметры заявки нетипичны для одобряемых обращений",
+        },
+    }
+
     for group_name, group_factors in FACTOR_GROUPS.items():
         group_total = sum(factors.get(f, 0) for f in group_factors)
         group_max = sum(WEIGHTS.get(f, 0) for f in group_factors) * 100
@@ -81,17 +115,16 @@ def score_single(features: dict) -> ScoringResult:
             group_pct = 0
 
         if group_pct >= 0.7:
-            icon = "✓"
-            level = "сильная"
+            level_key = "high"
         elif group_pct >= 0.4:
-            icon = "●"
-            level = "средняя"
+            level_key = "medium"
         else:
-            icon = "✗"
-            level = "слабая"
+            level_key = "low"
 
+        desc = GROUP_DESCRIPTIONS.get(group_name, {}).get(level_key, "")
         explanation.append(
-            f"{icon} {group_name}: {level} ({group_total:.1f}/{group_max:.0f} баллов)"
+            f"{group_name}: {desc} "
+            f"(оценка {group_total:.1f} из {group_max:.0f})."
         )
 
         # детализация по факторам внутри группы
@@ -99,9 +132,9 @@ def score_single(features: dict) -> ScoringResult:
             value = features.get(factor, 0)
             contrib = factors.get(factor, 0)
             label = FACTOR_LABELS.get(factor, factor)
-            explanation.append(f"    {label}: {value:.0%} → +{contrib:.1f}")
+            max_contrib = WEIGHTS.get(factor, 0) * 100
+            explanation.append(f"  • {label}: {contrib:.1f} из {max_contrib:.0f}")
 
-    # определяем уровень риска
     risk_level = "низкий" if score >= 70 else "средний" if score >= 45 else "высокий"
 
     return ScoringResult(
@@ -113,7 +146,7 @@ def score_single(features: dict) -> ScoringResult:
 
 
 def score_batch(features_df: pd.DataFrame) -> pd.DataFrame:
-    # векторизированный скоринг по 12 факторам
+    # векторизированный скоринг допустимых заявок + eligibility-флаг по дедлайну
     scores = pd.Series(0.0, index=features_df.index)
     factor_contributions = {}
 
@@ -130,6 +163,13 @@ def score_batch(features_df: pd.DataFrame) -> pd.DataFrame:
         bins=[-1, 45, 70, 101],
         labels=["Высокий", "Средний", "Низкий"],
     )
+    result["disqualified"] = False
+    result["disqualification_reason"] = None
+
+    deadline_mask = features_df.get("deadline_compliance", pd.Series(0.5, index=features_df.index)).fillna(0.5) <= 0
+    if deadline_mask.any():
+        result.loc[deadline_mask, "disqualified"] = True
+        result.loc[deadline_mask, "disqualification_reason"] = DEADLINE_DISQUALIFICATION_REASON
 
     # главный фактор и главная группа
     contrib_cols = [c for c in result.columns if c.startswith("contrib_")]
