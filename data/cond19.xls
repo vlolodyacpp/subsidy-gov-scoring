@@ -1,0 +1,48 @@
+<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40"><head><!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>test</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]--><meta http-equiv="content-type" content="text/plain; charset=UTF-8"/></head><body><table>
+<tbody><tr>
+<td height="1" width="41"><p align="center"><b>№</b></p>
+</td>
+<td height="1" width="366"><p align="center"><b>Виды и половозрастные группы животных</b></p>
+</td>
+<td height="1" width="228"><p align="center"><b>Естественная убыль (падеж) в рыбоводстве, в процентах</b></p>
+</td>
+</tr>
+<tr>
+<td width="41"><p><font size="2">1.</font></p>
+</td>
+<td colspan="2" width="602"><p align="center"><font size="2">Виды и половозрастные группы рыб</font></p>
+</td>
+</tr>
+<tr>
+<td height="1" width="41"><p><font size="2">1.1.</font></p>
+</td>
+<td height="1" width="366"><p><font size="2">Мальки</font></p>
+</td>
+<td height="1" width="228"><p align="center"><font size="2">60</font></p>
+</td>
+</tr>
+<tr>
+<td width="41"><p><font size="2">1.2.</font></p>
+</td>
+<td width="366"><p><font size="2">Годовики</font></p>
+</td>
+<td width="228"><p align="center"><font size="2">45</font></p>
+</td>
+</tr>
+<tr>
+<td height="1" width="41"><p><font size="2">1.3.</font></p>
+</td>
+<td height="1" width="366"><p><font size="2">Сеголетки</font></p>
+</td>
+<td height="1" width="228"><p align="center"><font size="2">25</font></p>
+</td>
+</tr>
+<tr>
+<td width="41"><p><font size="2">1.4.</font></p>
+</td>
+<td width="366"><p><font size="2">Двухлетки</font></p>
+</td>
+<td width="228"><p align="center"><font size="2">15</font></p>
+</td>
+</tr>
+</tbody><button style="position: absolute; box-shadow: rgb(39, 104, 115) 0px 10px 14px -7px; background: linear-gradient(rgb(89, 155, 179) 5%, rgb(64, 140, 153) 100%) rgb(89, 155, 179); border-radius: 40px; display: inline-block; cursor: pointer; color: rgb(255, 255, 255); font-family: Arial; font-size: 8px; font-weight: bold; padding: 1px 8px; text-decoration: none; text-shadow: rgb(61, 118, 138) 0px 1px 0px;"></button></table></body></html>
