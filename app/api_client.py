@@ -141,6 +141,22 @@ def get_timeline(
     return _get("/timeline", params=params)
 
 
+# загрузка датасета
+
+def upload_dataset(file_bytes: bytes, filename: str) -> dict:
+    with httpx.Client(base_url=API_URL, timeout=120.0) as client:
+        resp = client.post(
+            "/upload-dataset",
+            files={"file": (filename, file_bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
+        )
+        resp.raise_for_status()
+        return resp.json()
+
+
+def get_retrain_status() -> dict:
+    return _get("/retrain-status")
+
+
 # проверка доступности API
 
 def check_health() -> dict | None:

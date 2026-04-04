@@ -1,4 +1,8 @@
 import logging
+import shutil
+import subprocess
+import sys
+import threading
 from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
@@ -6,7 +10,7 @@ from time import perf_counter
 
 import numpy as np
 import pandas as pd
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.advisory import (
@@ -541,11 +545,10 @@ def _score_payload_from_index(idx: int, fallback_rule_result) -> dict[str, objec
     }
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # загрузка данных и расчёт скоров при старте сервера
-    logger.info("Загрузка данных из %s ...", DATA_PATH)
-    df = run_pipeline(DATA_PATH)
+def _load_dataset_into_state(app_instance: FastAPI, data_path: str) -> int:
+    """Load dataset, run full pipeline, compute scores, update app.state."""
+    logger.info("Загрузка данных из %s ...", data_path)
+    df = run_pipeline(data_path)
 
     logger.info("Feature engineering v4.0 ...")
     tables = build_feature_tables(df)
@@ -562,7 +565,9 @@ async def lifespan(app: FastAPI):
         extracted_features=features,
         rule_scores=rule_scores,
     )
-    model_bundle = _load_model_bundle_if_available(MODEL_PATH)
+    model_bundle = getattr(app_instance.state, "model_bundle", None)
+    if model_bundle is None:
+        model_bundle = _load_model_bundle_if_available(MODEL_PATH)
     if model_bundle is None:
         raise RuntimeError(
             "ML bundle is required for API startup. "
@@ -571,12 +576,11 @@ async def lifespan(app: FastAPI):
 
     scores = _prepare_api_scores(model_input, rule_scores, advisory, model_bundle)
 
-    # сохраняем в state
-    app.state.df = df
-    app.state.tables = tables
-    app.state.features = features
-    app.state.model_input = model_input
-    app.state.history_df = df.reindex(
+    app_instance.state.df = df
+    app_instance.state.tables = tables
+    app_instance.state.features = features
+    app_instance.state.model_input = model_input
+    app_instance.state.history_df = df.reindex(
         columns=[
             "app_number",
             "region",
@@ -593,31 +597,38 @@ async def lifespan(app: FastAPI):
             "is_approved",
         ]
     ).copy()
-    app.state.advisory = advisory
-    app.state.advisory_tables = advisory_tables
-    app.state.scores = scores
-    app.state.model_bundle = model_bundle
-    app.state.model_path = MODEL_PATH
-    app.state.runtime_monitor = _init_runtime_monitor()
+    app_instance.state.advisory = advisory
+    app_instance.state.advisory_tables = advisory_tables
+    app_instance.state.scores = scores
+    app_instance.state.model_bundle = model_bundle
+    app_instance.state.model_path = MODEL_PATH
     latest_submit_date = pd.to_datetime(df["submit_date"], errors="coerce").dropna()
-    app.state.default_request_year = (
+    app_instance.state.default_request_year = (
         int(latest_submit_date.max().year)
         if not latest_submit_date.empty
         else datetime.now().year
     )
-    app.state.blend_weights = (
+    app_instance.state.blend_weights = (
         model_bundle.get("blend_weights", DEFAULT_BLEND_WEIGHTS)
         if model_bundle
         else DEFAULT_BLEND_WEIGHTS
     )
-    app.state.started_at = datetime.now().isoformat()
+    app_instance.state.dataset_name = Path(data_path).name
 
     logger.info(
-        "Сервер готов: %d записей, средний балл %.1f, движок %s",
+        "Данные загружены: %d записей, средний балл %.1f, движок %s",
         len(df),
         scores["score"].mean(),
         _get_scoring_engine(),
     )
+    return len(df)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    _load_dataset_into_state(app, DATA_PATH)
+    app.state.runtime_monitor = _init_runtime_monitor()
+    app.state.started_at = datetime.now().isoformat()
     yield
     logger.info("Сервер остановлен.")
 
@@ -799,7 +810,116 @@ async def health_check():
         avg_score_latency_ms=_average_latency("score"),
         avg_rank_latency_ms=_average_latency("rank"),
         avg_explain_latency_ms=_average_latency("explain"),
+        dataset_name=getattr(app.state, "dataset_name", None),
     )
+
+
+UPLOAD_DATA_DIR = Path("data")
+
+_retrain_status: dict[str, object] = {
+    "status": "idle",
+    "started_at": None,
+    "finished_at": None,
+    "error": None,
+}
+
+
+def _run_retrain(data_path: str):
+    """Run train.py in background, then reload model + re-score."""
+    global _retrain_status
+    try:
+        _retrain_status["status"] = "training"
+        _retrain_status["started_at"] = datetime.now().isoformat()
+        _retrain_status["finished_at"] = None
+        _retrain_status["error"] = None
+
+        logger.info("Запуск переобучения модели на %s ...", data_path)
+        result = subprocess.run(
+            [sys.executable, "train.py", "--data-path", data_path],
+            capture_output=True,
+            text=True,
+            timeout=600,
+        )
+
+        if result.returncode != 0:
+            error_msg = result.stderr[-500:] if result.stderr else "Unknown error"
+            logger.error("Ошибка переобучения: %s", error_msg)
+            _retrain_status["status"] = "error"
+            _retrain_status["error"] = error_msg
+            _retrain_status["finished_at"] = datetime.now().isoformat()
+            return
+
+        logger.info("Переобучение завершено, перезагрузка модели...")
+        new_bundle = _load_model_bundle_if_available(MODEL_PATH)
+        if new_bundle is None:
+            _retrain_status["status"] = "error"
+            _retrain_status["error"] = "Модель не найдена после обучения"
+            _retrain_status["finished_at"] = datetime.now().isoformat()
+            return
+
+        app.state.model_bundle = new_bundle
+        _load_dataset_into_state(app, data_path)
+
+        _retrain_status["status"] = "done"
+        _retrain_status["finished_at"] = datetime.now().isoformat()
+        logger.info("Модель успешно переобучена и загружена.")
+
+    except subprocess.TimeoutExpired:
+        _retrain_status["status"] = "error"
+        _retrain_status["error"] = "Таймаут обучения (10 мин)"
+        _retrain_status["finished_at"] = datetime.now().isoformat()
+    except Exception as e:
+        logger.exception("Ошибка при переобучении: %s", e)
+        _retrain_status["status"] = "error"
+        _retrain_status["error"] = str(e)
+        _retrain_status["finished_at"] = datetime.now().isoformat()
+
+
+@app.post("/upload-dataset", tags=["Системные"])
+async def upload_dataset(file: UploadFile = File(...)):
+    """Upload .xlsx dataset, score with current model, auto-trigger retraining."""
+    if not file.filename.endswith((".xlsx", ".xls")):
+        raise HTTPException(status_code=400, detail="Файл должен быть в формате .xlsx")
+
+    UPLOAD_DATA_DIR.mkdir(parents=True, exist_ok=True)
+    save_path = UPLOAD_DATA_DIR / file.filename
+    with open(save_path, "wb") as f:
+        shutil.copyfileobj(file.file, f)
+
+    try:
+        count = _load_dataset_into_state(app, str(save_path))
+        app.state.current_data_path = str(save_path)
+
+        if _retrain_status["status"] != "training":
+            thread = threading.Thread(target=_run_retrain, args=(str(save_path),), daemon=True)
+            thread.start()
+
+        return {
+            "status": "ok",
+            "records_loaded": count,
+            "dataset_name": file.filename,
+            "retrain_started": True,
+        }
+    except Exception as e:
+        logger.exception("Ошибка при загрузке датасета: %s", e)
+        raise HTTPException(status_code=400, detail=f"Ошибка обработки файла: {e}")
+
+
+@app.post("/retrain", tags=["Системные"])
+async def retrain_model():
+    """Trigger model retraining on current dataset in background."""
+    if _retrain_status["status"] == "training":
+        raise HTTPException(status_code=409, detail="Обучение уже запущено")
+    data_path = getattr(app.state, "current_data_path", DATA_PATH)
+    thread = threading.Thread(target=_run_retrain, args=(data_path,), daemon=True)
+    thread.start()
+    return {"status": "started", "data_path": data_path}
+
+
+@app.get("/retrain-status", tags=["Системные"])
+async def retrain_status():
+    """Check retraining status."""
+    return dict(_retrain_status)
 
 
 @app.post("/score", response_model=ScoreResponse, tags=["Скоринг"])

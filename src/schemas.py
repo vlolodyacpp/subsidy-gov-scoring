@@ -210,6 +210,7 @@ class HealthResponse(BaseModel):
     avg_score_latency_ms: Optional[float] = None
     avg_rank_latency_ms: Optional[float] = None
     avg_explain_latency_ms: Optional[float] = None
+    dataset_name: Optional[str] = None
 
 
 class PaginatedApplications(BaseModel):

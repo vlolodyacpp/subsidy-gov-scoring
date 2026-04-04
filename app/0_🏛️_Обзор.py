@@ -9,7 +9,7 @@ from shared import (
     PLOTLY_LAYOUT,
     page_setup,
 )
-from api_client import get_factor_stats
+from api_client import get_factor_stats, upload_dataset, check_health, get_retrain_status
 
 
 def _fmt(val, fmt=".1f"):
@@ -220,6 +220,46 @@ def main():
     )
 
     st.markdown('<p class="main-title">🏛️ Subsidy Scoring System</p>', unsafe_allow_html=True)
+
+    # --- загрузка датасета ---
+    with st.expander("📂 Загрузить свой датасет", expanded=not st.session_state.get("dataset_loaded")):
+        uploaded = st.file_uploader(
+            "Выберите файл .xlsx с заявками",
+            type=["xlsx", "xls"],
+            key="dataset_uploader",
+        )
+
+        col_upload, col_info = st.columns([1, 2])
+        with col_upload:
+            if uploaded and st.button("Загрузить", type="primary"):
+                with st.spinner("Загрузка и скоринг..."):
+                    try:
+                        res = upload_dataset(uploaded.getvalue(), uploaded.name)
+                        st.session_state["dataset_loaded"] = True
+                        st.session_state["dataset_name"] = uploaded.name
+                        st.cache_data.clear()
+                        st.success(f"Загружено: **{uploaded.name}** — {res['records_loaded']:,} записей. Переобучение модели запущено.")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Ошибка: {e}")
+
+        with col_info:
+            health = check_health()
+            ds_name = (health or {}).get("dataset_name") or st.session_state.get("dataset_name", "subsidies.xlsx (по умолчанию)")
+            st.caption(f"Текущий датасет: **{ds_name}**")
+
+            retrain = get_retrain_status()
+            status = retrain.get("status", "idle")
+            if status == "training":
+                st.info("ML-модель переобучается на новых данных... Скоринг пока работает на предыдущей модели.")
+                import time
+                time.sleep(5)
+                st.rerun()
+            elif status == "done":
+                st.success("ML-модель переобучена на новых данных!")
+                st.cache_data.clear()
+            elif status == "error":
+                st.error(f"Ошибка переобучения: {retrain.get('error', '')[:150]}")
 
     result = page_setup("Главная")
     if not result:
