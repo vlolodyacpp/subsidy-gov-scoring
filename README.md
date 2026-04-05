@@ -200,21 +200,3 @@ POST /score
 
 ---
 
-## Для разработчика ML-модели
-
-Модель ожидается в формате `models/bundle.pkl` (joblib). Структура bundle:
-
-```python
-{
-    "model": sklearn-compatible estimator,          # predict_proba()
-    "feature_columns": list[str],                   # список признаков
-    "feature_set_name": str,                        # "v3" / "v3_extended"
-    "explanation_neutral_values": dict | None,      # нейтральные значения для SHAP
-    "probability_calibrator": callable | None,      # калибровка вероятностей
-    "probability_temperature": float | None,        # temperature scaling
-}
-```
-
-Признаки для обучения: правиловые факторы (17 штук), contributions (вклады), исторические ставки одобрения, логарифмы сумм, сезонные компоненты, взаимодействия. Полный список — `src/modeling.py`, функция `build_primary_model_frame()`.
-
-Целевая переменная: `is_approved` (бинарная: 1 = одобрена, 0 = отклонена).
