@@ -35,6 +35,18 @@ streamlit run app/start.py
 - Дашборд: http://localhost:8501
 - API документация (Swagger): http://localhost:8000/docs
 
+## Запуск через Docker
+
+```bash
+docker-compose up --build
+```
+
+Поднимаются два контейнера:
+- **api** — FastAPI backend на порту `8000`
+- **dashboard** — Streamlit дашборд на порту `8501`
+
+Дашборд дожидается готовности API (healthcheck) и запускается автоматически.
+
 ---
 
 ## Структура проекта
