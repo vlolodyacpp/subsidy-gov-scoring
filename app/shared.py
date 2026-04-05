@@ -18,12 +18,6 @@ RISK_COLORS = {
     "Высокий": "#e63946",
 }
 
-LEVEL_COLORS = {
-    "высокий": "#2d6a4f",
-    "средний": "#e9c46a",
-    "низкий": "#e63946",
-}
-
 WEIGHTS = {
     "normative_match": 0.08,
     "amount_normative_integrity": 0.06,

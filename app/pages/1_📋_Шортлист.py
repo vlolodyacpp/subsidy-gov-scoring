@@ -73,7 +73,7 @@ def render_shortlist(applications: list[dict], scoring_engine: str | None = None
     )
 
 
-st.set_page_config(page_title="Шортлист", page_icon="📋", layout="wide")
+
 st.markdown('<p class="main-title">📋 Шортлист заявок</p>', unsafe_allow_html=True)
 
 result = page_setup("Шортлист")
@@ -82,16 +82,22 @@ if result:
     applications = rank_data["applications"]
 
     scoring_engine = rank_data.get("scoring_engine", "")
-    model_name = rank_data.get("model_name")
-    if model_name:
-        st.caption(f"Движок: {scoring_engine} · Модель: {model_name}")
 
-    top_n = st.radio("Количество заявок", [50, 100, 200], horizontal=True, key="shortlist_top_n")
-
-    st.markdown(
-        f'<p class="subtitle">Найдено: {rank_data["total_filtered"]:,} · '
-        f'Показано: {min(len(applications), top_n)}</p>',
-        unsafe_allow_html=True,
-    )
+    col_count, col_info = st.columns([1, 3])
+    with col_count:
+        top_n = st.number_input(
+            "Количество заявок",
+            min_value=1,
+            max_value=len(applications),
+            value=min(50, len(applications)),
+            step=10,
+            key="shortlist_top_n",
+        )
+    with col_info:
+        st.markdown(
+            f'<p class="subtitle" style="margin-top:2rem;">Найдено: {rank_data["total_filtered"]:,} · '
+            f'Показано: {min(len(applications), top_n)}</p>',
+            unsafe_allow_html=True,
+        )
 
     render_shortlist(applications[:top_n], scoring_engine)

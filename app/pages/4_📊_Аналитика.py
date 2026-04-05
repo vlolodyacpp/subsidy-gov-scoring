@@ -268,7 +268,7 @@ def render_timeline(filters: dict):
 
 # --- page ---
 
-st.set_page_config(page_title="Аналитика", page_icon="📊", layout="wide")
+
 st.markdown('<p class="main-title">📊 Аналитика факторов</p>', unsafe_allow_html=True)
 
 result = page_setup("Аналитика")

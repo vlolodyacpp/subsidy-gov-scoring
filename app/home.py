@@ -8,6 +8,7 @@ from shared import (
     WEIGHTS,
     PLOTLY_LAYOUT,
     page_setup,
+    load_css,
 )
 from api_client import get_factor_stats, upload_dataset, check_health, get_retrain_status
 
@@ -31,7 +32,7 @@ def render_quick_summary(stats: dict, rank_data: dict):
     cols = st.columns(len(risk_scores))
     for col, (risk, scores) in zip(cols, sorted(risk_scores.items())):
         avg = sum(scores) / len(scores)
-        color = RISK_COLORS.get(risk, "#888")
+        color = RISK_COLORS.get(risk.capitalize(), "#888")
         col.markdown(
             f'<div style="background:#1a1a2e;border:1px solid #3a3a5a;border-left:4px solid {color};'
             f'border-radius:12px;padding:12px 16px;">'
@@ -268,21 +269,15 @@ def render_dataset_panel():
         st.error(f"Ошибка обновления: {retrain.get('error', '')[:150]}")
 
 
-def main():
-    st.set_page_config(
-        page_title="Subsidy Scoring",
-        page_icon="🏛️",
-        layout="wide",
-        initial_sidebar_state="expanded",
-    )
+load_css()
 
-    st.markdown('<p class="main-title">Система оценки заявок на субсидии</p>', unsafe_allow_html=True)
+st.markdown('<p class="main-title">🏛️ Система оценки заявок на субсидии</p>', unsafe_allow_html=True)
+st.markdown('<p class="subtitle">Аналитика, скоринг и ранжирование заявок на государственные субсидии</p>', unsafe_allow_html=True)
 
-    render_dataset_panel()
+render_dataset_panel()
 
-    result = page_setup("Главная")
-    if not result:
-        return
+result = page_setup("Главная")
+if result:
     filters, stats, rank_data = result
     applications = rank_data["applications"]
 
@@ -302,7 +297,3 @@ def main():
 
     render_charts(applications)
     render_factor_distributions(filters)
-
-
-if __name__ == "__main__":
-    main()

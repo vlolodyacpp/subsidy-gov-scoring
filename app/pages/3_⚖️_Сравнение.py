@@ -47,10 +47,10 @@ def render_comparison(app_numbers: list[str]):
     # краткая инфо
     col_info_a, col_info_b = st.columns(2)
     with col_info_a:
-        st.metric("Score A", f"{detail_a['score']:.1f}", help=detail_a.get("risk_level", ""))
+        st.metric("Балл А", f"{detail_a['score']:.1f}", help=detail_a.get("risk_level", ""))
         st.caption(f"{detail_a.get('region', '')} · {detail_a.get('direction', '')}")
     with col_info_b:
-        st.metric("Score B", f"{detail_b['score']:.1f}", help=detail_b.get("risk_level", ""))
+        st.metric("Балл Б", f"{detail_b['score']:.1f}", help=detail_b.get("risk_level", ""))
         st.caption(f"{detail_b.get('region', '')} · {detail_b.get('direction', '')}")
 
     factors_a = {f["name"]: f for f in detail_a.get("factors", [])}
@@ -125,7 +125,7 @@ def render_comparison(app_numbers: list[str]):
     st.dataframe(pd.DataFrame(comparison_data), hide_index=True, width="stretch")
 
 
-st.set_page_config(page_title="Сравнение", page_icon="⚖️", layout="wide")
+
 st.markdown('<p class="main-title">⚖️ Сравнение заявок</p>', unsafe_allow_html=True)
 
 result = page_setup("Сравнение")
