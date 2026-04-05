@@ -1122,6 +1122,7 @@ async def score_application(request: ScoreRequest):
     explanation.append("Детальная оценка по критериям:")
     explanation.extend(rule_result.explanation)
     factor_details = _build_rule_factor_details(features_dict, rule_result)
+    ml_factor_details = _build_model_factor_details(model_explanation)
 
     response = ScoreResponse(
         score=score_payload["score"],
@@ -1144,6 +1145,7 @@ async def score_application(request: ScoreRequest):
         scoring_engine=score_payload["scoring_engine"],
         model_name=score_payload["model_name"],
         factors=factor_details,
+        ml_factors=ml_factor_details,
         explanation=explanation,
     )
     _record_runtime_event("score", (perf_counter() - start_time) * 1000)
