@@ -409,7 +409,7 @@ header[data-testid="stHeader"] {
 }
 
 .factor-row-label {
-    font-size: 1.0rem;
+    font-size: 1.1rem;
     color: #b0b0c8;
 }
 
@@ -457,7 +457,7 @@ header[data-testid="stHeader"] {
 }
 
 .factor-detail-what {
-    font-size: 0.82rem;
+    font-size: 0.95rem;
     color: #7878a0;
     margin-top: 2px;
     line-height: 1.4;

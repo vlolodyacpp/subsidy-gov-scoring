@@ -141,7 +141,7 @@ def render_charts(applications: list[dict]):
     )
     fig.update_layout(
         bargap=0.05,
-        height=420,
+        height=620,
         margin=dict(t=10, b=30),
         legend=dict(
             orientation="h", yanchor="top", y=-0.15, xanchor="center", x=0.5,

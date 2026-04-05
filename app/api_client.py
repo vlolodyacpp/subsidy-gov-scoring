@@ -32,7 +32,29 @@ def get_directions() -> list[dict]:
     return _get("/directions")
 
 
-# статистика 
+@st.cache_data(ttl=300)
+def get_subsidy_types(direction: str | None = None) -> list[dict]:
+    params = {"direction": direction} if direction else {}
+    return _get("/subsidy-types", params=params)
+
+
+@st.cache_data(ttl=300)
+def get_districts(region: str | None = None) -> list[dict]:
+    params = {"region": region} if region else {}
+    return _get("/districts", params=params)
+
+
+@st.cache_data(ttl=300)
+def get_akimats(region: str | None = None) -> list[dict]:
+    params = {"region": region} if region else {}
+    return _get("/akimats", params=params)
+
+
+def score_new_application(data: dict) -> dict:
+    return _post("/score", data)
+
+
+# статистика
 
 @st.cache_data(ttl=60)
 def get_stats(

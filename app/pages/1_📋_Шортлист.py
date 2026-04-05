@@ -39,9 +39,9 @@ def render_shortlist(applications: list[dict], scoring_engine: str | None = None
     }
 
     if has_ml:
-        column_config["rule_score"] = st.column_config.NumberColumn("Rule", format="%.1f")
-        column_config["ml_score"] = st.column_config.NumberColumn("ML", format="%.1f")
-        column_config["history_recommendation"] = "Advisory"
+        column_config["rule_score"] = st.column_config.NumberColumn("По правилам", format="%.1f")
+        column_config["ml_score"] = st.column_config.NumberColumn("ML-модель", format="%.1f")
+        column_config["history_recommendation"] = "Рекомендация"
 
     display_cols = [
         "app_number", "region", "direction", "subsidy_type",
@@ -86,10 +86,12 @@ if result:
     if model_name:
         st.caption(f"Движок: {scoring_engine} · Модель: {model_name}")
 
+    top_n = st.radio("Количество заявок", [50, 100, 200], horizontal=True, key="shortlist_top_n")
+
     st.markdown(
         f'<p class="subtitle">Найдено: {rank_data["total_filtered"]:,} · '
-        f'Показано: {min(len(applications), 50)}</p>',
+        f'Показано: {min(len(applications), top_n)}</p>',
         unsafe_allow_html=True,
     )
 
-    render_shortlist(applications[:50], scoring_engine)
+    render_shortlist(applications[:top_n], scoring_engine)

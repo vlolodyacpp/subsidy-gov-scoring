@@ -1524,3 +1524,33 @@ async def list_regions():
 @app.get("/directions", tags=["Справочники"])
 async def list_directions():
     return _group_stats("direction")
+
+
+@app.get("/subsidy-types", tags=["Справочники"])
+async def list_subsidy_types(direction: str | None = Query(None)):
+    combined = _get_combined()
+    if direction:
+        combined = combined[combined["direction"] == direction]
+    types = combined["subsidy_type"].value_counts().reset_index()
+    types.columns = ["subsidy_type", "count"]
+    return [{"subsidy_type": r["subsidy_type"], "count": int(r["count"])} for _, r in types.iterrows()]
+
+
+@app.get("/districts", tags=["Справочники"])
+async def list_districts(region: str | None = Query(None)):
+    combined = _get_combined()
+    if region:
+        combined = combined[combined["region"] == region]
+    items = combined["district"].dropna().value_counts().reset_index()
+    items.columns = ["district", "count"]
+    return [{"district": r["district"], "count": int(r["count"])} for _, r in items.iterrows()]
+
+
+@app.get("/akimats", tags=["Справочники"])
+async def list_akimats(region: str | None = Query(None)):
+    combined = _get_combined()
+    if region:
+        combined = combined[combined["region"] == region]
+    items = combined["akimat"].dropna().value_counts().reset_index()
+    items.columns = ["akimat", "count"]
+    return [{"akimat": r["akimat"], "count": int(r["count"])} for _, r in items.iterrows()]

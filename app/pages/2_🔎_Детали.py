@@ -519,10 +519,10 @@ def render_details(detail: dict):
             fig.update_layout(
                 barmode="overlay",
                 height=max(450, len(factors_df) * 40),
-                margin=dict(l=280, r=20, t=10, b=30),
+                margin=dict(l=320, r=20, t=10, b=50),
                 yaxis_title="",
                 showlegend=True,
-                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+                legend=dict(orientation="h", yanchor="top", y=-0.08, xanchor="center", x=0.5, title_text=""),
                 **PLOTLY_LAYOUT,
             )
             st.plotly_chart(fig, width="stretch", use_container_width=True)
