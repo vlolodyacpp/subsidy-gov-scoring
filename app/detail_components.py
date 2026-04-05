@@ -197,6 +197,18 @@ ML_FACTOR_DESCRIPTIONS = {
     "amount_to_type_median_ratio": "Отношение суммы к медиане по типу субсидии.",
     "adequacy_x_direction_rate": "Взаимодействие адекватности суммы и одобряемости направления.",
     "adequacy_x_budget_pressure": "Взаимодействие адекватности суммы и бюджетного давления.",
+    "criteria_complexity_x_subsidy_type_rate": "Взаимодействие регуляторной сложности и одобряемости типа субсидии.",
+    "direction_risk_x_mortality_compliance": "Взаимодействие биориска направления и уровня падежа.",
+    "rule_score_x_budget_pressure": "Взаимодействие оценки по правилам и бюджетного давления.",
+    "amount_log_x_rule_score": "Взаимодействие размера суммы и оценки по правилам.",
+    "submit_month_cos": "Сезонная компонента месяца подачи (косинусоидальное кодирование).",
+    "amount_log": "Логарифм запрашиваемой суммы (нормализация для модели).",
+    "contrib_pasture_compliance": "Вклад нагрузки на пастбища в оценку по правилам.",
+    "contrib_mortality_compliance": "Вклад уровня падежа в оценку по правилам.",
+    "contrib_grazing_utilization": "Вклад использования пастбищ в оценку по правилам.",
+    "contrib_criteria_complexity": "Вклад регуляторной сложности в оценку по правилам.",
+    "contrib_direction_risk": "Вклад биориска направления в оценку по правилам.",
+    "contrib_regional_pasture_capacity": "Вклад ёмкости пастбищ в оценку по правилам.",
     "rule_score_feature": "Суммарная оценка заявки по правилам, используемая как признак модели.",
     "subsidy_type": "Тип субсидии (категориальный признак).",
 }
@@ -254,8 +266,20 @@ ML_FACTOR_LABELS = {
     "amount_to_type_median_ratio": "Отношение суммы к медиане типа",
     "adequacy_x_direction_rate": "Адекватность × одобряемость направления",
     "adequacy_x_budget_pressure": "Адекватность × бюджетное давление",
+    "criteria_complexity_x_subsidy_type_rate": "Рег. сложность × одобряемость типа",
+    "direction_risk_x_mortality_compliance": "Биориск × уровень падежа",
+    "rule_score_x_budget_pressure": "Оценка по правилам × бюджетное давление",
+    "amount_log_x_rule_score": "Размер суммы × оценка по правилам",
     "rule_score_feature": "Оценка по правилам (фича)",
     "subsidy_type": "Тип субсидии",
+    "submit_month_cos": "Сезонность подачи (косинус)",
+    "amount_log": "Размер суммы (лог.)",
+    "contrib_pasture_compliance": "Вклад нагрузки на пастбища",
+    "contrib_mortality_compliance": "Вклад уровня падежа",
+    "contrib_grazing_utilization": "Вклад использования пастбищ",
+    "contrib_criteria_complexity": "Вклад регуляторной сложности",
+    "contrib_direction_risk": "Вклад биориска направления",
+    "contrib_regional_pasture_capacity": "Вклад ёмкости пастбищ",
 }
 
 
@@ -396,7 +420,7 @@ def render_details(detail: dict):
         else:
             decision_badge = ''
 
-        threshold_text = f"порог: {decision_threshold:.0%}" if decision_threshold is not None else ""
+        threshold_text = f"порог: {decision_threshold / 100:.0%}" if decision_threshold is not None else ""
 
         st.markdown(f"""
         <div class="scores-breakdown">
@@ -497,7 +521,7 @@ def render_details(detail: dict):
                 legend=dict(orientation="h", yanchor="top", y=-0.08, xanchor="center", x=0.5, title_text=""),
                 **PLOTLY_LAYOUT,
             )
-            st.plotly_chart(fig, width="stretch", use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
 
         default_factors = [
             f for f in factors

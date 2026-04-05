@@ -85,7 +85,7 @@ def render_risk_donut(stats: dict):
         showlegend=False,
         **PLOTLY_LAYOUT,
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
 
 
 def render_top_regions(stats: dict):
@@ -120,7 +120,7 @@ def render_top_regions(stats: dict):
         yaxis_title="",
         **PLOTLY_LAYOUT,
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
 
 
 def render_charts(applications: list[dict]):
@@ -150,7 +150,7 @@ def render_charts(applications: list[dict]):
         ),
         **PLOTLY_LAYOUT,
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
 
 
 def render_factor_distributions(filters: dict):
@@ -214,7 +214,7 @@ def render_factor_distributions(filters: dict):
         ),
         **PLOTLY_LAYOUT,
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
 
 
 def render_dataset_panel():
@@ -245,7 +245,7 @@ def render_dataset_panel():
             key="dataset_uploader",
             label_visibility="collapsed",
         )
-        if uploaded and st.button("Загрузить", type="primary", use_container_width=True):
+        if uploaded and st.button("Загрузить", type="primary", width="stretch"):
             with st.spinner("Загрузка и скоринг..."):
                 try:
                     res = upload_dataset(uploaded.getvalue(), uploaded.name)

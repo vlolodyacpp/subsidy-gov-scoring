@@ -285,10 +285,31 @@ _ML_FACTOR_HUMAN_NAMES = {
     "akimat_history_count_log": "история заявок акимата",
     "amount_to_normative_ratio": "отношение суммы к нормативу",
     "amount_to_type_median_ratio": "отношение суммы к медиане типа",
-    "adequacy_x_direction_rate": "адекватность × одобряемость направления",
+    "adequacy_x_direction_rate": "адекватность × о��обряемость направления",
     "adequacy_x_budget_pressure": "адекватность × бюджетное давление",
+    "criteria_complexity_x_subsidy_type_rate": "регуляторная сложность × одобряемость типа",
+    "direction_risk_x_mortality_compliance": "биориск направления × уровень падежа",
+    "rule_score_x_budget_pressure": "оценка по правилам × бюджетное давление",
+    "amount_log_x_rule_score": "размер суммы × оценка по правилам",
     "rule_score_feature": "оценка по правилам (фича)",
-    "subsidy_type": "тип субсидии",
+    "subsidy_type": "тип су��сидии",
+    # условия содержания и регуляторика
+    "pasture_compliance": "соответствие нагрузки на пастбища",
+    "mortality_compliance": "соответствие уровня падежа",
+    "grazing_utilization": "использование пастбищного сезона",
+    "criteria_complexity": "регулят��рная сложность",
+    "direction_risk": "биологический риск направления",
+    "regional_pasture_capacity": "ёмкость пастбищ региона",
+    # вклады условий содержания
+    "contrib_pasture_compliance": "вклад нагрузки на пастбища",
+    "contrib_mortality_compliance": "вклад уровня падежа",
+    "contrib_grazing_utilization": "вклад использования пастбищ",
+    "contrib_criteria_complexity": "вклад регуляторной сложности",
+    "contrib_direction_risk": "вклад биориска направления",
+    "contrib_regional_pasture_capacity": "вклад ёмкости пастбищ",
+    # технические компоненты
+    "submit_month_cos": "сезонность подачи (косинус)",
+    "amount_log": "размер суммы (лог.)",
 }
 
 
@@ -1130,6 +1151,9 @@ async def score_application(request: ScoreRequest):
         rule_score=score_payload["rule_score"],
         ml_score=score_payload["ml_score"],
         ml_probability=score_payload["ml_probability"],
+        decision_score_name=score_payload.get("decision_score_name"),
+        decision_threshold=score_payload.get("decision_threshold"),
+        decision_predicted_positive=score_payload.get("decision_predicted_positive"),
         history_match_source=score_payload["history_match_source"],
         history_match_count=score_payload["history_match_count"],
         history_approval_rate=score_payload["history_approval_rate"],

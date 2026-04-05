@@ -59,7 +59,7 @@ def render_shortlist(applications: list[dict], scoring_engine: str | None = None
 
     st.dataframe(
         shortlist[available],
-        use_container_width=True,
+        width="stretch",
         height=600,
         column_config=column_config,
     )
