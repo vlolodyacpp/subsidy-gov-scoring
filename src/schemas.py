@@ -63,6 +63,9 @@ class ScoreResponse(BaseModel):
     rule_score: Optional[float] = Field(None, description="Rule-based score")
     ml_score: Optional[float] = Field(None, description="ML score 0-100")
     ml_probability: Optional[float] = Field(None, description="Оценка итоговой силы заявки по primary ML")
+    decision_score_name: Optional[str] = Field(None, description="Имя скора, по которому принято решение")
+    decision_threshold: Optional[float] = Field(None, description="Порог принятия положительного решения")
+    decision_predicted_positive: Optional[bool] = Field(None, description="Положительное решение по итоговому скору")
     history_match_source: str = Field("global", description="Какой исторический срез использован для advisory")
     history_match_count: int = Field(0, description="Сколько похожих исторических заявок найдено")
     history_approval_rate: Optional[float] = Field(None, description="Историческая одобряемость похожих заявок")
@@ -95,6 +98,9 @@ class ApplicationBrief(BaseModel):
     rule_score: Optional[float] = None
     ml_score: Optional[float] = None
     ml_probability: Optional[float] = None
+    decision_score_name: Optional[str] = None
+    decision_threshold: Optional[float] = None
+    decision_predicted_positive: Optional[bool] = None
     history_match_source: str = "global"
     history_match_count: int = 0
     history_approval_rate: Optional[float] = None
@@ -136,6 +142,9 @@ class ExplainResponse(BaseModel):
     rule_score: Optional[float] = Field(None, description="Rule-based score")
     ml_score: Optional[float] = Field(None, description="ML score 0-100")
     ml_probability: Optional[float] = Field(None, description="Оценка итоговой силы заявки по primary ML")
+    decision_score_name: Optional[str] = Field(None, description="Имя скора, по которому принято решение")
+    decision_threshold: Optional[float] = Field(None, description="Порог принятия положительного решения")
+    decision_predicted_positive: Optional[bool] = Field(None, description="Положительное решение по итоговому скору")
     history_match_source: str = Field("global", description="Какой исторический срез использован для advisory")
     history_match_count: int = Field(0, description="Сколько похожих исторических заявок найдено")
     history_approval_rate: Optional[float] = Field(None, description="Историческая одобряемость похожих заявок")

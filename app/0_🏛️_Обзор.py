@@ -17,14 +17,12 @@ def _fmt(val, fmt=".1f"):
 
 
 def render_quick_summary(stats: dict, rank_data: dict):
-    """Краткая сводка по текущей выборке."""
     applications = rank_data.get("applications", [])
     if not applications:
         return
 
-    st.markdown('<p class="section-header">📌 Сводка</p>', unsafe_allow_html=True)
+    st.markdown('<p class="section-header">Сводка по рискам</p>', unsafe_allow_html=True)
 
-    # Средний балл по уровню риска
     import collections
     risk_scores = collections.defaultdict(list)
     for app in applications:
@@ -47,10 +45,10 @@ def render_quick_summary(stats: dict, rank_data: dict):
 
 
 def render_metrics(stats: dict):
-    st.markdown('<p class="section-header">📊 Ключевые метрики</p>', unsafe_allow_html=True)
+    st.markdown('<p class="section-header">Ключевые метрики</p>', unsafe_allow_html=True)
 
     col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Средний балл", _fmt(stats.get("mean_score")))
+    col1.metric("Итоговый балл (ср.)", _fmt(stats.get("mean_score")))
     col2.metric("Медиана", _fmt(stats.get("median_score")))
     col3.metric("Всего заявок", f"{stats.get('total_records', 0):,}")
 
@@ -64,7 +62,7 @@ def render_metrics(stats: dict):
 
 
 def render_risk_donut(stats: dict):
-    st.markdown('<p class="section-header">🎯 Распределение по риску</p>', unsafe_allow_html=True)
+    st.markdown('<p class="section-header">Распределение по уровню риска</p>', unsafe_allow_html=True)
 
     risk_dist = stats["risk_distribution"]
     labels = list(risk_dist.keys())
@@ -77,20 +75,20 @@ def render_risk_donut(stats: dict):
         hole=0.45,
         marker=dict(colors=colors),
         textinfo="label+percent",
-        textfont=dict(size=13),
+        textfont=dict(size=14),
         hovertemplate="%{label}: %{value:,} заявок<extra></extra>",
     ))
     fig.update_layout(
-        height=320,
+        height=400,
         margin=dict(t=10, b=10, l=10, r=10),
         showlegend=False,
         **PLOTLY_LAYOUT,
     )
-    st.plotly_chart(fig, width="stretch")
+    st.plotly_chart(fig, use_container_width=True)
 
 
 def render_top_regions(stats: dict):
-    st.markdown('<p class="section-header">🏆 Топ регионов</p>', unsafe_allow_html=True)
+    st.markdown('<p class="section-header">Топ регионов по итоговому баллу</p>', unsafe_allow_html=True)
 
     top_regions = stats.get("top_regions", [])
     if not top_regions:
@@ -108,24 +106,24 @@ def render_top_regions(stats: dict):
         color_continuous_scale="Tealgrn",
         hover_data={"count": True, "approval_rate": ":.2%", "avg_score": ":.1f"},
         labels={
-            "avg_score": "Средний балл",
+            "avg_score": "Средний итоговый балл",
             "region": "",
-            "count": "Заявок",
-            "approval_rate": "Одобряемость",
+            "count": "Количество заявок",
+            "approval_rate": "Доля одобренных",
         },
     )
     fig.update_layout(
-        height=320,
+        height=400,
         margin=dict(t=10, b=30, l=0, r=20),
         coloraxis_showscale=False,
         yaxis_title="",
         **PLOTLY_LAYOUT,
     )
-    st.plotly_chart(fig, width="stretch")
+    st.plotly_chart(fig, use_container_width=True)
 
 
 def render_charts(applications: list[dict]):
-    st.markdown('<p class="section-header">📈 Распределение скоров</p>', unsafe_allow_html=True)
+    st.markdown('<p class="section-header">Распределение итоговых баллов</p>', unsafe_allow_html=True)
 
     if not applications:
         st.info("Нет данных для графика.")
@@ -139,19 +137,23 @@ def render_charts(applications: list[dict]):
         nbins=30,
         color="risk_level",
         color_discrete_map=RISK_COLORS,
-        labels={"score": "Балл", "risk_level": "Уровень риска", "count": "Кол-во"},
+        labels={"score": "Итоговый балл", "risk_level": "Уровень риска", "count": "Количество"},
     )
     fig.update_layout(
         bargap=0.05,
-        height=350,
+        height=420,
         margin=dict(t=10, b=30),
+        legend=dict(
+            orientation="h", yanchor="top", y=-0.15, xanchor="center", x=0.5,
+            title_text="",
+        ),
         **PLOTLY_LAYOUT,
     )
-    st.plotly_chart(fig, width="stretch")
+    st.plotly_chart(fig, use_container_width=True)
 
 
 def render_factor_distributions(filters: dict):
-    st.markdown('<p class="section-header">📊 Средние значения факторов</p>', unsafe_allow_html=True)
+    st.markdown('<p class="section-header">Средний вклад каждого фактора в итоговый балл</p>', unsafe_allow_html=True)
 
     factor_data = get_factor_stats(
         region=filters.get("region"),
@@ -184,7 +186,7 @@ def render_factor_distributions(filters: dict):
         y=df["factor"],
         x=df["max_contrib"],
         orientation="h",
-        name="Макс. возможный",
+        name="Максимально возможный вклад",
         marker_color="rgba(100, 100, 140, 0.3)",
         hovertemplate="%{y}: макс. %{x:.1f}<extra></extra>",
     ))
@@ -193,22 +195,77 @@ def render_factor_distributions(filters: dict):
         y=df["factor"],
         x=df["weighted_contrib"],
         orientation="h",
-        name="Средний вклад",
+        name="Фактический средний вклад",
         marker_color="#4cc9f0",
         customdata=df["mean"].values,
-        hovertemplate="%{y}: %{x:.1f} баллов (среднее значение: %{customdata:.2f})<extra></extra>",
+        hovertemplate="%{y}: %{x:.1f} баллов (среднее: %{customdata:.2f})<extra></extra>",
     ))
 
     fig.update_layout(
         barmode="overlay",
-        height=420,
+        height=max(500, len(df) * 30),
         margin=dict(l=0, r=20, t=10, b=30),
         yaxis_title="",
         showlegend=True,
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        legend=dict(
+            orientation="h", yanchor="top", y=-0.08, xanchor="center", x=0.5,
+            title_text="",
+        ),
         **PLOTLY_LAYOUT,
     )
-    st.plotly_chart(fig, width="stretch")
+    st.plotly_chart(fig, use_container_width=True)
+
+
+def render_dataset_panel():
+    health = check_health()
+    ds_name = (health or {}).get("dataset_name") or st.session_state.get(
+        "dataset_name", "subsidies.xlsx (по умолчанию)"
+    )
+    records = (health or {}).get("records_loaded", 0)
+
+    retrain = get_retrain_status()
+    status = retrain.get("status", "idle")
+
+    col_status, col_upload = st.columns([2, 1])
+    with col_status:
+        st.markdown(
+            f'<div style="background:#1a1a2e;border:1px solid #3a3a5a;border-radius:12px;padding:1rem 1.2rem;">'
+            f'<span style="color:#8888aa;font-size:0.85rem;">Текущий датасет:</span> '
+            f'<span style="color:#d0d0e0;font-weight:600;">{ds_name}</span> '
+            f'<span style="color:#6a6a80;">({records:,} записей)</span>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+
+    with col_upload:
+        uploaded = st.file_uploader(
+            "Загрузить .xlsx",
+            type=["xlsx", "xls"],
+            key="dataset_uploader",
+            label_visibility="collapsed",
+        )
+        if uploaded and st.button("Загрузить", type="primary", use_container_width=True):
+            with st.spinner("Загрузка и скоринг..."):
+                try:
+                    res = upload_dataset(uploaded.getvalue(), uploaded.name)
+                    st.session_state["dataset_loaded"] = True
+                    st.session_state["dataset_name"] = uploaded.name
+                    st.cache_data.clear()
+                    st.success(f"{uploaded.name} — {res['records_loaded']:,} записей загружено")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Ошибка: {e}")
+
+    if status == "training":
+        st.info("Система обновляет оценки на новых данных...")
+        import time
+        time.sleep(5)
+        st.rerun()
+    elif status == "done":
+        st.success("Оценки пересчитаны на новых данных!")
+        st.cache_data.clear()
+    elif status == "error":
+        st.error(f"Ошибка обновления: {retrain.get('error', '')[:150]}")
 
 
 def main():
@@ -219,47 +276,9 @@ def main():
         initial_sidebar_state="expanded",
     )
 
-    st.markdown('<p class="main-title">🏛️ Subsidy Scoring System</p>', unsafe_allow_html=True)
+    st.markdown('<p class="main-title">Система оценки заявок на субсидии</p>', unsafe_allow_html=True)
 
-    # --- загрузка датасета ---
-    with st.expander("📂 Загрузить свой датасет", expanded=not st.session_state.get("dataset_loaded")):
-        uploaded = st.file_uploader(
-            "Выберите файл .xlsx с заявками",
-            type=["xlsx", "xls"],
-            key="dataset_uploader",
-        )
-
-        col_upload, col_info = st.columns([1, 2])
-        with col_upload:
-            if uploaded and st.button("Загрузить", type="primary"):
-                with st.spinner("Загрузка и скоринг..."):
-                    try:
-                        res = upload_dataset(uploaded.getvalue(), uploaded.name)
-                        st.session_state["dataset_loaded"] = True
-                        st.session_state["dataset_name"] = uploaded.name
-                        st.cache_data.clear()
-                        st.success(f"Загружено: **{uploaded.name}** — {res['records_loaded']:,} записей. Переобучение модели запущено.")
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"Ошибка: {e}")
-
-        with col_info:
-            health = check_health()
-            ds_name = (health or {}).get("dataset_name") or st.session_state.get("dataset_name", "subsidies.xlsx (по умолчанию)")
-            st.caption(f"Текущий датасет: **{ds_name}**")
-
-            retrain = get_retrain_status()
-            status = retrain.get("status", "idle")
-            if status == "training":
-                st.info("ML-модель переобучается на новых данных... Скоринг пока работает на предыдущей модели.")
-                import time
-                time.sleep(5)
-                st.rerun()
-            elif status == "done":
-                st.success("ML-модель переобучена на новых данных!")
-                st.cache_data.clear()
-            elif status == "error":
-                st.error(f"Ошибка переобучения: {retrain.get('error', '')[:150]}")
+    render_dataset_panel()
 
     result = page_setup("Главная")
     if not result:

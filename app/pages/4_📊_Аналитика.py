@@ -19,6 +19,12 @@ FACTOR_SHORT = {
     "unit_count": "Кол-во единиц",
     "direction_approval_rate": "Одобр. направления",
     "subsidy_type_approval_rate": "Одобр. типа",
+    "pasture_compliance": "Пастбища",
+    "mortality_compliance": "Падёж",
+    "grazing_utilization": "Выпас",
+    "criteria_complexity": "Регуляторика",
+    "direction_risk": "Биориск",
+    "regional_pasture_capacity": "Ёмкость пастбищ",
 }
 
 MONTH_NAMES = {
@@ -87,7 +93,7 @@ def render_factor_histograms(filters: dict):
 
 def render_region_breakdown(filters: dict):
     """Тепловая карта + таблица: регионы x факторы."""
-    st.markdown('<p class="section-header">🗺️ Регионы: разбивка по факторам</p>', unsafe_allow_html=True)
+    st.markdown('<p class="section-header">🗺️ Среднее значение факторов по регионам</p>', unsafe_allow_html=True)
 
     region_data = get_region_factors(
         direction=filters.get("direction"),
@@ -254,7 +260,7 @@ def render_timeline(filters: dict):
         margin=dict(t=10, b=30),
         yaxis=dict(title="Заявок", side="left"),
         yaxis2=dict(title="Средний балл", side="right", overlaying="y", range=[0, 100]),
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        legend=dict(orientation="h", yanchor="top", y=-0.15, xanchor="center", x=0.5),
         **PLOTLY_LAYOUT,
     )
     st.plotly_chart(fig, width="stretch")

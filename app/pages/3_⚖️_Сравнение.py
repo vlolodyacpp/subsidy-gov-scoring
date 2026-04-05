@@ -94,13 +94,13 @@ def render_comparison(app_numbers: list[str]):
     fig.update_layout(
         polar=dict(
             bgcolor="rgba(0,0,0,0)",
-            radialaxis=dict(visible=True, color="#555", gridcolor="#333"),
-            angularaxis=dict(color="#aaa", gridcolor="#333"),
+            radialaxis=dict(visible=True, color="#555", gridcolor="#333", tickfont=dict(size=12)),
+            angularaxis=dict(color="#ccc", gridcolor="#333", tickfont=dict(size=14)),
         ),
-        height=500,
-        margin=dict(t=40, b=40, l=80, r=80),
+        height=700,
+        margin=dict(t=60, b=60, l=120, r=120),
         showlegend=True,
-        legend=dict(orientation="h", yanchor="bottom", y=-0.15, xanchor="center", x=0.5),
+        legend=dict(orientation="h", yanchor="top", y=-0.05, xanchor="center", x=0.5, font=dict(size=13)),
         **PLOTLY_LAYOUT,
     )
     st.plotly_chart(fig, width="stretch")

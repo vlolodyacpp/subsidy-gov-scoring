@@ -15,6 +15,8 @@ FACTOR_GROUPS = {
     "Бюджет и очередь": ["budget_pressure", "queue_position"],
     "Региональная специфика": ["region_specialization", "region_direction_approval_rate", "akimat_approval_rate"],
     "Характеристики заявки": ["unit_count", "direction_approval_rate", "subsidy_type_approval_rate"],
+    "Условия содержания": ["pasture_compliance", "mortality_compliance", "grazing_utilization"],
+    "Регуляторная сложность": ["criteria_complexity", "direction_risk", "regional_pasture_capacity"],
 }
 
 GROUP_ICONS = {
@@ -22,6 +24,8 @@ GROUP_ICONS = {
     "Бюджет и очередь": "📅",
     "Региональная специфика": "🗺️",
     "Характеристики заявки": "📌",
+    "Условия содержания": "🐄",
+    "Регуляторная сложность": "⚖️",
 }
 
 # Подробные описания для каждой метрики — для члена комиссии
@@ -103,6 +107,48 @@ FACTOR_DESCRIPTIONS = {
         "medium": "Одобряемость типа субсидии на среднем уровне.",
         "low": "Данный тип субсидии одобряется редко.",
     },
+    "pasture_compliance": {
+        "what": "Соответствие фактической нагрузки на пастбища установленным нормам для данного региона и вида животных.",
+        "why": "Перегрузка пастбищ снижает продуктивность и может привести к деградации земель.",
+        "high": "Нагрузка на пастбища в пределах нормы — условия содержания соответствуют требованиям.",
+        "medium": "Нагрузка на пастбища приближается к предельным значениям.",
+        "low": "Нагрузка на пастбища значительно превышает допустимые нормы.",
+    },
+    "mortality_compliance": {
+        "what": "Соответствие уровня падежа животных допустимым нормам по данному направлению.",
+        "why": "Высокий падёж может указывать на проблемы с ветеринарным обеспечением или условиями содержания.",
+        "high": "Уровень падежа значительно ниже предельных норм.",
+        "medium": "Уровень падежа в пределах допустимого, но требует внимания.",
+        "low": "Уровень падежа превышает допустимые нормы — высокий риск.",
+    },
+    "grazing_utilization": {
+        "what": "Степень использования пастбищного сезона (доля фактических дней выпаса от нормативного периода).",
+        "why": "Эффективное использование пастбищного сезона — показатель рациональности хозяйствования.",
+        "high": "Пастбищный сезон используется эффективно.",
+        "medium": "Пастбищный сезон используется частично.",
+        "low": "Пастбищный сезон используется неэффективно.",
+    },
+    "criteria_complexity": {
+        "what": "Оценка простоты регуляторной проверки для данного направления (обратная сложность критериев).",
+        "why": "Чем больше регуляторных критериев — тем выше вероятность несоответствия по одному из них.",
+        "high": "Направление имеет относительно простые критерии проверки.",
+        "medium": "Средний уровень регуляторной сложности.",
+        "low": "Направление имеет множество критериев — повышен риск несоответствия.",
+    },
+    "direction_risk": {
+        "what": "Биологическая безопасность направления: оценка на основе среднего уровня падежа по отрасли.",
+        "why": "Направления с высоким средним падежом более рискованны для субсидирования.",
+        "high": "Направление имеет низкий средний уровень падежа — биологически безопасно.",
+        "medium": "Средний уровень биологического риска по направлению.",
+        "low": "Направление имеет высокий средний уровень падежа — повышенный риск.",
+    },
+    "regional_pasture_capacity": {
+        "what": "Ресурсная ёмкость пастбищ региона: насколько регион обеспечен пастбищными угодьями.",
+        "why": "Регионы с дефицитом пастбищ имеют повышенный риск перегрузки при субсидировании.",
+        "high": "Регион хорошо обеспечен пастбищными ресурсами.",
+        "medium": "Средняя обеспеченность пастбищами.",
+        "low": "Регион испытывает дефицит пастбищных ресурсов.",
+    },
 }
 
 # Описания для ML-факторов
@@ -118,6 +164,12 @@ ML_FACTOR_DESCRIPTIONS = {
     "unit_count": "Оценка количества заявленных единиц.",
     "direction_approval_rate": "Общий процент одобрения по направлению.",
     "subsidy_type_approval_rate": "Историческая одобряемость данного типа субсидии.",
+    "pasture_compliance": "Соответствие нагрузки на пастбища нормам региона.",
+    "mortality_compliance": "Соответствие уровня падежа допустимым нормам.",
+    "grazing_utilization": "Эффективность использования пастбищного сезона.",
+    "criteria_complexity": "Простота регуляторной проверки для направления.",
+    "direction_risk": "Биологическая безопасность направления по уровню падежа.",
+    "regional_pasture_capacity": "Обеспеченность региона пастбищными ресурсами.",
     "rule_score": "Суммарная оценка по всем правилам нормативного соответствия.",
     "contrib_budget_pressure": "Вклад бюджетного давления в оценку по правилам.",
     "contrib_region_direction_approval_rate": "Вклад региональной одобряемости в оценку.",
@@ -171,6 +223,12 @@ ML_FACTOR_LABELS = {
     "unit_count": "Кол-во единиц",
     "direction_approval_rate": "Одобряемость направления",
     "subsidy_type_approval_rate": "Одобряемость типа субсидии",
+    "pasture_compliance": "Нагрузка на пастбища",
+    "mortality_compliance": "Уровень падежа",
+    "grazing_utilization": "Использование пастбищ",
+    "criteria_complexity": "Регуляторная сложность",
+    "direction_risk": "Биологический риск направления",
+    "regional_pasture_capacity": "Ресурсная ёмкость пастбищ",
     "rule_score": "Оценка по правилам",
     "contrib_budget_pressure": "Вклад бюджетного давления",
     "contrib_region_direction_approval_rate": "Вклад одобряемости региона",
@@ -261,6 +319,16 @@ def _group_narrative(group_name: str, group_pct: float) -> str:
             "на среднем уровне": "Параметры заявки в целом типичны, но не выделяются среди одобренных.",
             "ниже ожиданий": "Параметры заявки нехарактерны для обычно одобряемых обращений.",
         },
+        "Условия содержания": {
+            "хорошо": "Пастбищная нагрузка, падёж и использование сезона — в пределах нормы.",
+            "на среднем уровне": "Часть показателей условий содержания требует внимания.",
+            "ниже ожиданий": "Показатели условий содержания существенно отклоняются от нормативов.",
+        },
+        "Регуляторная сложность": {
+            "хорошо": "Направление имеет умеренные регуляторные требования и низкий биологический риск.",
+            "на среднем уровне": "Средний уровень регуляторной и биологической нагрузки.",
+            "ниже ожиданий": "Направление сопряжено со сложными критериями или повышенным биологическим риском.",
+        },
     }
 
     return narratives.get(group_name, {}).get(strength, f"Оценка группы: {strength}.")
@@ -288,12 +356,13 @@ def render_details(detail: dict):
     ml_probability = detail.get("ml_probability")
     has_ml = ml_score is not None
 
-    # --- карточка скора + информация о заявке ---
+    # --- карточка итогового балла (стилизована как score-card) ---
+    score_color = "#2d6a4f" if score >= 60 else "#e9c46a" if score >= 40 else "#e63946"
     st.markdown(f"""
-    <div class="detail-header">
-        <div class="detail-score-block">
-            <p class="detail-score-label">{"Итоговый балл" if has_ml else "Балл"}</p>
-            <p class="detail-score">{score:.1f}</p>
+    <div class="scores-breakdown">
+        <div class="score-card" style="max-width:180px;">
+            <div class="score-card-label">Итоговый балл</div>
+            <div class="score-card-value" style="color:{score_color}">{score:.1f}</div>
             <span class="risk-badge {risk_class}">{detail['risk_level']} риск</span>
         </div>
         <div class="detail-info-block">
@@ -328,28 +397,40 @@ def render_details(detail: dict):
     """, unsafe_allow_html=True)
 
     # --- итоговые оценки — блок с ML и Rule Score ---
+    decision_positive = detail.get("decision_predicted_positive")
+    decision_threshold = detail.get("decision_threshold")
+
     if has_ml:
         rule_color = "#4cc9f0" if rule_score and rule_score >= 60 else "#e9c46a" if rule_score and rule_score >= 40 else "#e63946"
         ml_color = "#4cc9f0" if ml_score and ml_score >= 60 else "#e9c46a" if ml_score and ml_score >= 40 else "#e63946"
         prob_pct = f"{ml_probability:.0%}" if ml_probability else "—"
         prob_color = "#2d6a4f" if ml_probability and ml_probability >= 0.7 else "#e9c46a" if ml_probability and ml_probability >= 0.4 else "#e63946"
 
+        if decision_positive is True:
+            decision_badge = '<span class="risk-badge risk-low">Рекомендована</span>'
+        elif decision_positive is False:
+            decision_badge = '<span class="risk-badge risk-high">Не рекомендована</span>'
+        else:
+            decision_badge = ''
+
+        threshold_text = f"порог: {decision_threshold:.0%}" if decision_threshold is not None else ""
+
         st.markdown(f"""
         <div class="scores-breakdown">
             <div class="score-card">
                 <div class="score-card-label">Оценка по правилам</div>
                 <div class="score-card-value" style="color: {rule_color}">{rule_score:.1f}<span class="score-card-max">/100</span></div>
-                <div class="score-card-desc">Соответствие нормативным критериям и статистическим показателям</div>
+                <div class="score-card-desc">Нормативные критерии и статистика</div>
             </div>
             <div class="score-card">
                 <div class="score-card-label">Оценка ML-модели</div>
                 <div class="score-card-value" style="color: {ml_color}">{ml_score:.1f}<span class="score-card-max">/100</span></div>
-                <div class="score-card-desc">Прогноз нейросетевой модели на основе анализа исторических данных</div>
+                <div class="score-card-desc">Прогноз на основе исторических данных</div>
             </div>
             <div class="score-card">
-                <div class="score-card-label">Вероятность одобрения</div>
+                <div class="score-card-label">Сила заявки</div>
                 <div class="score-card-value" style="color: {prob_color}">{prob_pct}</div>
-                <div class="score-card-desc">Оценка итоговой силы заявки по модели машинного обучения</div>
+                <div class="score-card-desc">{decision_badge} {threshold_text}</div>
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -380,21 +461,14 @@ def render_details(detail: dict):
                 st.metric("Соответствие", "—")
 
     # --- объяснение по группам факторов с двумя вкладками ---
-    st.markdown('<p class="section-header">📝 Почему такой балл?</p>', unsafe_allow_html=True)
-
-    # Общий вердикт
-    verdict_top = _score_verdict(score).replace("**", "")
-    st.markdown(
-        f'<div class="verdict-card"><div class="verdict-text">{verdict_top}</div></div>',
-        unsafe_allow_html=True,
-    )
+    st.markdown('<p class="section-header">Из чего складывается оценка</p>', unsafe_allow_html=True)
 
     factors = detail.get("factors", [])
     ml_factors = detail.get("ml_factors", [])
 
-    # Вкладки: Оценка по правилам | Оценка ML-модели
+    # Вкладки
     if has_ml and ml_factors:
-        tab_rule, tab_ml = st.tabs(["📋 Оценка по правилам", "🤖 Оценка ML-модели"])
+        tab_rule, tab_ml = st.tabs(["Оценка по нормативным критериям", "Оценка на основе исторических данных"])
     else:
         tab_rule = st.container()
         tab_ml = None
@@ -524,7 +598,6 @@ def render_details(detail: dict):
                         else:
                             level_color = "#e63946"  # красный
                         raw_value = fd.get("value")
-                        value_pct = f"{float(raw_value):.0%}" if raw_value is not None else "—"
 
                         # Описание и пояснение
                         desc = FACTOR_DESCRIPTIONS.get(fd["name"], {})
@@ -545,129 +618,104 @@ def render_details(detail: dict):
                         </div>
                         """, unsafe_allow_html=True)
 
-    # ===== TAB 2: ML-model =====
+
+
+    # ===== TAB 2: Оценка на основе исторических данных =====
     if tab_ml is not None:
         with tab_ml:
             if ml_factors:
-                st.markdown("""
-                <div class="ml-intro-card">
-                    <div class="ml-intro-text">
-                        Нейросетевая модель анализирует заявку целиком и оценивает, насколько она похожа
-                        на исторически одобрённые заявки. Ниже показаны факторы, которые <strong>больше всего повлияли</strong>
-                        на решение модели — как в положительную, так и в отрицательную сторону.
+                # --- Итог решения ---
+                prob_pct = f"{ml_probability:.0%}" if ml_probability else "—"
+                if decision_positive is True:
+                    decision_text = "По результатам анализа исторических данных заявка <b>рекомендована к одобрению</b>."
+                    decision_border = "#2d6a4f"
+                elif decision_positive is False:
+                    decision_text = "По результатам анализа исторических данных заявка <b>не рекомендована к одобрению</b>."
+                    decision_border = "#e63946"
+                else:
+                    decision_text = "Система проанализировала заявку на основе тысяч ранее рассмотренных обращений."
+                    decision_border = "#e9c46a"
+
+                st.markdown(f"""
+                <div style="background:#1a1a2e;border:1px solid #3a3a5a;border-left:4px solid {decision_border};
+                            border-radius:12px;padding:1rem 1.5rem;margin-bottom:1rem;">
+                    <div style="font-size:1.05rem;color:#d0d0e0;line-height:1.6;">
+                        {decision_text}
+                        Оценка силы заявки: <b style="font-size:1.2rem;">{prob_pct}</b>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
 
-                # Разделяем на положительные и отрицательные
-                positive_ml = [f for f in ml_factors if f["contribution"] > 0]
-                negative_ml = [f for f in ml_factors if f["contribution"] < 0]
-                neutral_ml = [f for f in ml_factors if f["contribution"] == 0]
+                # --- Все факторы отсортированы по абсолютному влиянию ---
+                active_factors = [mf for mf in ml_factors if mf["contribution"] != 0]
+                active_factors.sort(key=lambda f: abs(f["contribution"]), reverse=True)
 
-                # График по ML
-                ml_df = pd.DataFrame(ml_factors)
-                ml_df = ml_df[ml_df["contribution"] != 0].copy()
-                if not ml_df.empty:
-                    # Русские метки для графика — всегда берём из словаря
-                    ml_df["ru_label"] = ml_df["name"].map(ML_FACTOR_LABELS).fillna(ml_df["label"])
-                    ml_df["abs_contrib"] = ml_df["contribution"].abs()
-                    ml_df = ml_df.sort_values("abs_contrib", ascending=True)
-
-                    def get_ml_color(c):
-                        if c >= 1.0: return "#2d6a4f"
-                        elif c > 0: return "#e9c46a"
-                        else: return "#e63946"
-
-                    colors_ml = ml_df["contribution"].apply(get_ml_color).tolist()
-
-                    fig_ml = go.Figure()
-
-                    max_abs = ml_df["abs_contrib"].max()
-                    bg_x = [max_abs * 1.1 if c > 0 else -max_abs * 1.1 for c in ml_df["contribution"]]
-
-                    fig_ml.add_trace(go.Bar(
-                        y=ml_df["ru_label"],
-                        x=bg_x,
-                        orientation="h",
-                        name="Возможный разброс",
-                        marker_color="rgba(100, 100, 140, 0.15)",
-                        hovertemplate="<extra></extra>",
-                        hoverinfo="skip"
-                    ))
-
-                    fig_ml.add_trace(go.Bar(
-                        y=ml_df["ru_label"],
-                        x=ml_df["contribution"],
-                        orientation="h",
-                        name="Фактический вклад",
-                        marker_color=colors_ml,
-                        hovertemplate="%{y}: %{x:+.1f} баллов<extra>Влияние</extra>"
-                    ))
-                    
-                    fig_ml.update_layout(
-                        barmode="overlay",
-                        title="Вклад факторов по оценке ML-модели",
-                        height=max(450, len(ml_df) * 40),
-                        margin=dict(l=280, r=20, t=40, b=30),
-                        xaxis_title="Влияние (баллы)",
-                        yaxis_title="",
-                        showlegend=False,
-                        **PLOTLY_LAYOUT
+                if active_factors:
+                    st.markdown(
+                        '<p style="font-size:1.1rem;font-weight:600;color:#d0d0e0;margin:1rem 0 0.5rem;">'
+                        'Что повлияло на решение (от самого значимого к наименее):</p>',
+                        unsafe_allow_html=True,
                     )
-                    st.plotly_chart(fig_ml, width="stretch", use_container_width=True)
 
-                if positive_ml:
-                    st.markdown('<p class="ml-section-label">✅ Положительно повлияло на оценку ML</p>', unsafe_allow_html=True)
-                    for mf in positive_ml:
+                    for mf in active_factors:
                         impact = mf["contribution"]
                         label = _ml_label(mf)
                         desc_text = ML_FACTOR_DESCRIPTIONS.get(mf["name"], "")
-                        impact_bar_width = min(abs(impact) * 5, 100)
+
+                        # Показываем реальное значение если есть
+                        raw_val = mf.get("value")
+                        if raw_val is not None and raw_val != "":
+                            try:
+                                num_val = float(raw_val)
+                                if 0 <= num_val <= 1:
+                                    val_display = f"{num_val:.0%}"
+                                elif abs(num_val) > 1000:
+                                    val_display = f"{num_val:,.0f}"
+                                else:
+                                    val_display = f"{num_val:.2f}"
+                            except (ValueError, TypeError):
+                                val_display = str(raw_val)
+                        else:
+                            val_display = None
+
+                        if impact > 0:
+                            level_color = "#2d6a4f"
+                            arrow = "▲"
+                            verdict_text = "повышает шансы"
+                        else:
+                            level_color = "#e63946"
+                            arrow = "▼"
+                            verdict_text = "снижает шансы"
+
+                        sign_mf = "+" if impact > 0 else ""
+                        bar_width = min(abs(impact) * 8, 100)
+
+                        value_html = f' <span style="color:#8888aa;font-size:0.85rem;">= {val_display}</span>' if val_display else ""
 
                         st.markdown(f"""
-                        <div class="ml-factor-card positive">
-                            <div class="ml-factor-header">
-                                <span class="ml-factor-label">{label}</span>
-                                <span class="ml-factor-impact positive">+{impact:.1f} б.</span>
+                        <div class="factor-detail-card">
+                            <div class="factor-row-header">
+                                <span class="factor-row-label">{label}{value_html}</span>
+                                <span class="factor-row-value" style="color:{level_color}">{arrow} {sign_mf}{impact:.1f} б.</span>
                             </div>
-                            <div class="ml-factor-bar-bg">
-                                <div class="ml-factor-bar-fill positive" style="width: {impact_bar_width:.0f}%"></div>
+                            <div class="factor-row-bar-bg">
+                                <div class="factor-row-bar-fill" style="width: {bar_width:.0f}%; background: {level_color}"></div>
                             </div>
-                            <div class="ml-factor-desc">{desc_text}</div>
+                            <div class="factor-detail-what">{desc_text}</div>
                         </div>
                         """, unsafe_allow_html=True)
 
-                if negative_ml:
-                    st.markdown('<p class="ml-section-label">⚠️ Отрицательно повлияло на оценку ML</p>', unsafe_allow_html=True)
-                    for mf in negative_ml:
-                        impact = mf["contribution"]
-                        label = _ml_label(mf)
-                        desc_text = ML_FACTOR_DESCRIPTIONS.get(mf["name"], "")
-                        impact_bar_width = min(abs(impact) * 5, 100)
-
-                        st.markdown(f"""
-                        <div class="ml-factor-card negative">
-                            <div class="ml-factor-header">
-                                <span class="ml-factor-label">{label}</span>
-                                <span class="ml-factor-impact negative">{impact:.1f} б.</span>
-                            </div>
-                            <div class="ml-factor-bar-bg">
-                                <div class="ml-factor-bar-fill negative" style="width: {impact_bar_width:.0f}%"></div>
-                            </div>
-                            <div class="ml-factor-desc">{desc_text}</div>
-                        </div>
-                        """, unsafe_allow_html=True)
-
+                # нейтральные — в свернутом виде
+                neutral_ml = [mf for mf in ml_factors if mf["contribution"] == 0]
                 if neutral_ml:
-                    with st.expander(f"Нейтральные факторы ({len(neutral_ml)})"):
+                    with st.expander(f"Показатели без влияния ({len(neutral_ml)})"):
                         for mf in neutral_ml:
                             label = _ml_label(mf)
                             desc_text = ML_FACTOR_DESCRIPTIONS.get(mf["name"], "")
                             st.markdown(f"**{label}** — {desc_text}" if desc_text else f"**{label}**")
 
             else:
-                st.info("ML-модель не предоставила детализацию по факторам для данной заявки.")
-
+                st.info("Нет данных для анализа на основе исторических заявок.")
     # --- подробное текстовое заключение для комиссии ---
     st.markdown('<p class="section-header">📜 Заключение для комиссии</p>', unsafe_allow_html=True)
 

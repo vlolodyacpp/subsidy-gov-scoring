@@ -302,7 +302,7 @@ def _build_model_factor_details(model_explanation: dict[str, object] | None) -> 
         return []
 
     factor_details: list[FactorDetail] = []
-    for item in model_explanation.get("feature_effects", [])[:10]:
+    for item in model_explanation.get("feature_effects", []):
         contribution = float(item.get("score_impact", 0.0))
         abs_contribution = abs(contribution)
         if abs_contribution >= 8:
@@ -459,6 +459,9 @@ def _score_single_payload(
         "rule_score": float(rule_result.score),
         "ml_score": None,
         "ml_probability": None,
+        "decision_score_name": None,
+        "decision_threshold": None,
+        "decision_predicted_positive": None,
         "disqualified": is_disqualified,
         "disqualification_reason": eligibility_payload["disqualification_reason"],
         "eligibility_status": str(eligibility_payload["eligibility_status"]),
@@ -501,6 +504,15 @@ def _score_single_payload(
     payload["rule_score"] = float(blended_row["rule_score"])
     payload["ml_score"] = float(blended_row["ml_score"])
     payload["ml_probability"] = float(blended_row["ml_probability"])
+    payload["decision_score_name"] = (
+        None if pd.isna(blended_row.get("decision_score_name"))
+        else str(blended_row["decision_score_name"])
+    )
+    payload["decision_threshold"] = _optional_float(blended_row.get("decision_threshold"))
+    payload["decision_predicted_positive"] = (
+        None if pd.isna(blended_row.get("decision_predicted_positive"))
+        else bool(blended_row["decision_predicted_positive"])
+    )
     payload["disqualified"] = bool(blended_row.get("disqualified", payload["disqualified"]))
     payload["disqualification_reason"] = (
         None
@@ -533,6 +545,9 @@ def _score_payload_from_index(idx: int, fallback_rule_result) -> dict[str, objec
             "rule_score": float(fallback_rule_result.score),
             "ml_score": None,
             "ml_probability": None,
+            "decision_score_name": None,
+            "decision_threshold": None,
+            "decision_predicted_positive": None,
             "disqualified": False,
             "disqualification_reason": None,
             "eligibility_status": "preliminarily_eligible",
@@ -558,6 +573,13 @@ def _score_payload_from_index(idx: int, fallback_rule_result) -> dict[str, objec
         "rule_score": float(row.get("rule_score", fallback_rule_result.score)),
         "ml_score": _optional_float(row.get("ml_score")),
         "ml_probability": _optional_float(row.get("ml_probability")),
+        "decision_score_name": (
+            None if pd.isna(row.get("decision_score_name")) else str(row.get("decision_score_name"))
+        ),
+        "decision_threshold": _optional_float(row.get("decision_threshold")),
+        "decision_predicted_positive": (
+            None if pd.isna(row.get("decision_predicted_positive")) else bool(row.get("decision_predicted_positive"))
+        ),
         "disqualified": bool(row.get("disqualified", False)),
         "disqualification_reason": (
             None if pd.isna(row.get("disqualification_reason")) else str(row.get("disqualification_reason"))
@@ -758,6 +780,13 @@ def _make_app_brief(row: pd.Series) -> ApplicationBrief:
         rule_score=_optional_float(row.get("rule_score")),
         ml_score=_optional_float(row.get("ml_score")),
         ml_probability=_optional_float(row.get("ml_probability")),
+        decision_score_name=(
+            None if pd.isna(row.get("decision_score_name")) else str(row.get("decision_score_name"))
+        ),
+        decision_threshold=_optional_float(row.get("decision_threshold")),
+        decision_predicted_positive=(
+            None if pd.isna(row.get("decision_predicted_positive")) else bool(row.get("decision_predicted_positive"))
+        ),
         history_match_source=str(row.get("history_match_source", "global")),
         history_match_count=int(row.get("history_match_count", 0)),
         history_approval_rate=_optional_float(row.get("history_approval_rate")),

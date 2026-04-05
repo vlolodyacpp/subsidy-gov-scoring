@@ -271,12 +271,11 @@ def compute_historical_group_count(
 
 
 def compute_budget_pressure(df: pd.DataFrame) -> pd.Series:
-    # бюджетное давление без утечки в будущее.
-    # Идея: какая доля запрошенных средств одобрялась в этой группе до сих пор?
-    # fulfillment_rate = prev_approved_amount / prev_requested_amount
-    #   ≈ 1.0 → почти всё одобрялось → давление низкое (score высокий)
-    #   ≈ 0.5 → половина отклоняется → давление среднее
-    #   → 0.0 → почти ничего не одобрялось → давление высокое (score низкий)
+    # Бюджетное давление: cumulative fulfillment rate + rank-нормализация внутри группы.
+    # Шаг 1: raw fulfillment_rate = prev_approved_amount / prev_requested_amount
+    # Шаг 2: rank-нормализация внутри (region, direction) → равномерное [0, 1]
+    # Это решает проблему высокого approval rate (~92%), при котором raw values
+    # скапливаются в диапазоне 0.9–1.0 и не дифференцируют заявки.
     df_sorted = _sort_by_submit_order(df)
     grouped = df_sorted.groupby(["region", "direction"], sort=False)
 
@@ -284,14 +283,32 @@ def compute_budget_pressure(df: pd.DataFrame) -> pd.Series:
     prev_approved = grouped["_approved_amount"].cumsum() - df_sorted["_approved_amount"]
     prev_requested = grouped["amount"].cumsum() - df_sorted["amount"]
 
-    pressure = np.where(
-        prev_requested > 0,
-        (prev_approved / prev_requested).clip(0, 1),
-        0.5,
+    raw_pressure = pd.Series(
+        np.where(
+            prev_requested > 0,
+            (prev_approved / prev_requested).clip(0, 1),
+            np.nan,
+        ),
+        index=df_sorted.index,
     )
 
-    result = pd.Series(pressure, index=df_sorted["_orig_index"])
-    return result.reindex(df.index).astype(float)
+    # rank-нормализация внутри группы: average rank → [0, 1]
+    ranked = raw_pressure.groupby(
+        [df_sorted["region"], df_sorted["direction"]],
+    ).rank(method="average", na_option="keep")
+    group_sizes = raw_pressure.groupby(
+        [df_sorted["region"], df_sorted["direction"]],
+    ).transform("count")
+    normalized = np.where(
+        group_sizes > 1,
+        (ranked - 1) / (group_sizes - 1),
+        0.5,
+    )
+    # заявки без предшественников (первые в группе) → 0.5
+    normalized = np.where(raw_pressure.isna(), 0.5, normalized)
+
+    result = pd.Series(normalized, index=df_sorted["_orig_index"])
+    return result.reindex(df.index).astype(float).clip(0, 1)
 
 
 def compute_queue_position(df: pd.DataFrame) -> pd.Series:

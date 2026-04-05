@@ -45,7 +45,8 @@ WEIGHTS = {
 }
 
 DEFAULT_VALUE_FACTORS = {"budget_pressure", "queue_position", "unit_count",
-                         "pasture_compliance", "mortality_compliance", "grazing_utilization"}
+                         "pasture_compliance", "mortality_compliance", "grazing_utilization",
+                         "criteria_complexity", "direction_risk", "regional_pasture_capacity"}
 
 PLOTLY_LAYOUT = dict(
     paper_bgcolor="rgba(0,0,0,0)",
