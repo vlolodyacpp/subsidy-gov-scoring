@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 import json
 from copy import deepcopy
 from datetime import datetime, timezone
@@ -44,12 +45,87 @@ from src.scoring import (
 )
 
 
+SYNTHETIC_FEATURES_PATH = "data/cleaned/synthetic_features.csv"
 RULE_FEATURE_COLUMNS = list(WEIGHTS.keys())
+RULE_CONTRIBUTION_COLUMNS = [f"contrib_{column}" for column in RULE_FEATURE_COLUMNS]
 PRIMARY_MODEL_CATEGORICAL_COLUMNS = [
     "subsidy_type",
 ]
-PRIMARY_MODEL_NUMERIC_COLUMNS = [
+SAFE_SYNTHETIC_FEATURE_COLUMNS = [
+    "criteria_complexity",
+    "direction_risk",
+    "regional_pasture_capacity",
+]
+LEAKY_OR_DIAGNOSTIC_SYNTHETIC_COLUMNS = [
+    "pasture_compliance",
+    "mortality_compliance",
+    "grazing_utilization",
+    "actual_pasture_load",
+    "actual_mortality_pct",
+    "actual_grazing_days",
+]
+LEAKY_RULE_SYNTHETIC_FEATURE_COLUMNS = [
+    "pasture_compliance",
+    "mortality_compliance",
+    "grazing_utilization",
+]
+EXCLUDED_COLUMNS = [
+    "app_number",
+    "row_id",
+    "date_str",
+    "submit_date",
+    "status",
+    "is_approved",
+    "training_target",
+    "historical_is_approved",
+    "pasture_norm",
+    "grazing_days",
+    "mortality_mean",
+    "mortality_max",
+    "avg_criteria_count",
+] + LEAKY_OR_DIAGNOSTIC_SYNTHETIC_COLUMNS
+ALL_SYNTHETIC_FEATURE_COLUMNS = [
+    "pasture_norm",
+    "grazing_days",
+    "mortality_mean",
+    "mortality_max",
+    "avg_criteria_count",
+] + SAFE_SYNTHETIC_FEATURE_COLUMNS + LEAKY_OR_DIAGNOSTIC_SYNTHETIC_COLUMNS
+SYNTHETIC_RULE_FEATURE_COLUMNS = [
+    "pasture_compliance",
+    "mortality_compliance",
+    "grazing_utilization",
+    "criteria_complexity",
+    "direction_risk",
+    "regional_pasture_capacity",
+]
+EXISTING_ONLY_FEATURE_SET = "existing_only"
+EXISTING_PLUS_SYNTHETIC_SAFE_FEATURE_SET = "existing_plus_synthetic_safe"
+OFFLINE_EXPERIMENTAL_FEATURE_SET = EXISTING_PLUS_SYNTHETIC_SAFE_FEATURE_SET
+FEATURE_SET_ORDER = [
+    EXISTING_ONLY_FEATURE_SET,
+    EXISTING_PLUS_SYNTHETIC_SAFE_FEATURE_SET,
+]
+FEATURE_SET_DEPLOYABILITY = {
+    EXISTING_ONLY_FEATURE_SET: {
+        "deployable": True,
+        "reason": (
+            "Признаки строятся из raw request, нормативного lookup и исторических "
+            "time-causal tables, поэтому могут быть честно воспроизведены для новой заявки."
+        ),
+    },
+    EXISTING_PLUS_SYNTHETIC_SAFE_FEATURE_SET: {
+        "deployable": False,
+        "reason": (
+            "Feature set использует offline-only synthetic condition signals, которые "
+            "подтягиваются через cleaned `synthetic_features.csv` по `app_number` и не "
+            "могут быть честно восстановлены для новой заявки без дополнительных фактов."
+        ),
+    },
+}
+RAW_SIGNAL_COLUMNS = [
     "normative_log",
+    "amount_log",
     "amount_adequacy",
     "normative_match",
     "normative_original_match",
@@ -59,6 +135,10 @@ PRIMARY_MODEL_NUMERIC_COLUMNS = [
     "unit_count_log",
     "unit_count_original_log",
     "submit_month_sin",
+    "submit_month_cos",
+    "region_specialization",
+    "region_direction_approval_rate",
+    "akimat_approval_rate",
     "direction_approval_rate",
     "subsidy_type_approval_rate",
     "region_approval_rate",
@@ -72,31 +152,300 @@ PRIMARY_MODEL_NUMERIC_COLUMNS = [
     "queue_position",
     "amount_to_normative_ratio",
     "amount_to_type_median_ratio",
+]
+RULE_SCORE_AUGMENTATION_COLUMNS = [
+    "rule_score_feature",
+    "rule_score",
+]
+INTERACTION_FEATURE_COLUMNS = [
     "adequacy_x_direction_rate",
     "adequacy_x_budget_pressure",
-    "rule_score_feature",
-    "contrib_normative_match",
-    "contrib_amount_adequacy",
-    "contrib_budget_pressure",
-    "contrib_queue_position",
+    "criteria_complexity_x_subsidy_type_rate",
+    "direction_risk_x_mortality_compliance",
+    "rule_score_x_budget_pressure",
+    "amount_log_x_rule_score",
 ]
+PRIMARY_MODEL_NUMERIC_COLUMNS = list(
+    dict.fromkeys(
+        RAW_SIGNAL_COLUMNS
+        + RULE_FEATURE_COLUMNS
+        + RULE_SCORE_AUGMENTATION_COLUMNS
+        + RULE_CONTRIBUTION_COLUMNS
+        + INTERACTION_FEATURE_COLUMNS
+    )
+)
 FEATURE_COLUMNS = PRIMARY_MODEL_CATEGORICAL_COLUMNS + PRIMARY_MODEL_NUMERIC_COLUMNS
+FEATURE_SET_COLUMNS = {
+    EXISTING_ONLY_FEATURE_SET: FEATURE_COLUMNS,
+    EXISTING_PLUS_SYNTHETIC_SAFE_FEATURE_SET: FEATURE_COLUMNS,
+}
+DEFAULT_FEATURE_SET_NAME = EXISTING_ONLY_FEATURE_SET
 MERIT_PROXY_FEATURE_COLUMNS = [
     "amount_adequacy",
     "amount_to_normative_ratio",
     "unit_count_log",
 ]
-PROCESS_BIASED_FEATURE_COLUMNS: list[str] = []
-DEFAULT_BLEND_WEIGHTS = {"rule_score": 0.25, "ml_score": 0.75}
+PROCESS_BIASED_FEATURE_COLUMNS: list[str] = list(LEAKY_OR_DIAGNOSTIC_SYNTHETIC_COLUMNS)
 MIN_RULE_BLEND_WEIGHT = 0.25
+DEFAULT_BLEND_WEIGHTS = {"rule_score": 0.25, "ml_score": 0.75}
+DEFAULT_DECISION_SCORE_NAME = "final_score"
+DEFAULT_DECISION_THRESHOLD = 50.0
+DECISION_SCORE_SCALE_MAX = 100.0
+BLEND_WEIGHT_SEARCH_GRID = [
+    round(float(rule_weight), 2)
+    for rule_weight in np.linspace(
+        MIN_RULE_BLEND_WEIGHT,
+        1.0,
+        int((1.0 - MIN_RULE_BLEND_WEIGHT) / 0.05) + 1,
+    )
+]
 MERIT_PROXY_POSITIVE_THRESHOLD = 0.68
 REGIONAL_SIGNAL_SHRINK = 0.35
-RULE_AUGMENTATION_COLUMNS = [
-    "contrib_normative_match",
-    "contrib_amount_adequacy",
-    "contrib_budget_pressure",
-    "contrib_queue_position",
-]
+RULE_AUGMENTATION_COLUMNS = list(RULE_CONTRIBUTION_COLUMNS)
+
+
+def resolve_blend_weights(
+    blend_weights: dict[str, float] | None = None,
+) -> dict[str, float]:
+    if blend_weights is None:
+        resolved = dict(DEFAULT_BLEND_WEIGHTS)
+    else:
+        resolved = {
+            "rule_score": float(blend_weights.get("rule_score", 0.0)),
+            "ml_score": float(blend_weights.get("ml_score", 0.0)),
+        }
+        total = float(resolved["rule_score"] + resolved["ml_score"])
+        if total <= 0:
+            raise ValueError("Blend weights must sum to a positive value.")
+        if not np.isclose(total, 1.0):
+            raise ValueError(
+                f"Blend weights must sum to 1.0, got {resolved['rule_score']} + "
+                f"{resolved['ml_score']} = {total}"
+            )
+
+    return {
+        "rule_score": round(float(resolved["rule_score"]), 4),
+        "ml_score": round(float(resolved["ml_score"]), 4),
+    }
+
+
+def compute_blended_scores(
+    rule_scores: pd.Series | np.ndarray,
+    ml_probabilities: pd.Series | np.ndarray,
+    blend_weights: dict[str, float] | None = None,
+    disqualified_mask: pd.Series | np.ndarray | list[bool] | None = None,
+) -> np.ndarray:
+    resolved_weights = resolve_blend_weights(blend_weights)
+    rule_arr = np.asarray(rule_scores).astype(float)
+    ml_score_arr = np.asarray(ml_probabilities).astype(float) * 100.0
+    blended = np.round(
+        rule_arr * resolved_weights["rule_score"]
+        + ml_score_arr * resolved_weights["ml_score"],
+        1,
+    )
+    if disqualified_mask is not None:
+        disqualified_arr = np.asarray(disqualified_mask).astype(bool)
+        blended[disqualified_arr] = 0.0
+    return blended
+
+
+def resolve_score_scale_max(
+    y_score: pd.Series | np.ndarray,
+    score_scale_max: float | None = None,
+) -> float:
+    if score_scale_max is not None:
+        return float(score_scale_max)
+
+    score_arr = np.asarray(y_score).astype(float)
+    finite = score_arr[np.isfinite(score_arr)]
+    if finite.size == 0:
+        return 1.0
+    if float(np.min(finite)) >= 0.0 and float(np.max(finite)) <= 1.0 + 1e-8:
+        return 1.0
+    return DECISION_SCORE_SCALE_MAX
+
+
+def build_threshold_candidates(
+    y_score: pd.Series | np.ndarray,
+    score_scale_max: float | None = None,
+) -> np.ndarray:
+    resolved_scale = resolve_score_scale_max(y_score, score_scale_max)
+    score_arr = np.asarray(y_score).astype(float)
+    finite = score_arr[np.isfinite(score_arr)]
+    if finite.size == 0:
+        return np.array([resolved_scale / 2.0], dtype=float)
+
+    if resolved_scale <= 1.0 + 1e-8:
+        base = np.array([0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95])
+        sweep = np.linspace(0.05, 0.95, 37)
+    else:
+        base = np.arange(5.0, resolved_scale, 5.0)
+        sweep = np.linspace(5.0, resolved_scale - 5.0, 37)
+
+    quantiles = np.quantile(finite, np.linspace(0.05, 0.95, 19))
+    thresholds = np.unique(
+        np.concatenate([base, sweep, quantiles]).round(4)
+    )
+    thresholds = thresholds[(thresholds > 0.0) & (thresholds < resolved_scale)]
+    if thresholds.size == 0:
+        thresholds = np.array([resolved_scale / 2.0], dtype=float)
+    return thresholds.astype(float)
+
+
+def resolve_feature_set_name(feature_set_name: str | None = None) -> str:
+    resolved = feature_set_name or DEFAULT_FEATURE_SET_NAME
+    if resolved not in FEATURE_SET_COLUMNS:
+        raise ValueError(f"Unknown feature_set_name: {resolved}")
+    return resolved
+
+
+def get_feature_columns(feature_set_name: str | None = None) -> list[str]:
+    resolved = resolve_feature_set_name(feature_set_name)
+    return list(FEATURE_SET_COLUMNS[resolved])
+
+
+def get_categorical_feature_columns(feature_set_name: str | None = None) -> list[str]:
+    resolve_feature_set_name(feature_set_name)
+    return list(PRIMARY_MODEL_CATEGORICAL_COLUMNS)
+
+
+def get_numeric_feature_columns(feature_set_name: str | None = None) -> list[str]:
+    resolved = resolve_feature_set_name(feature_set_name)
+    return [
+        column
+        for column in FEATURE_SET_COLUMNS[resolved]
+        if column not in PRIMARY_MODEL_CATEGORICAL_COLUMNS
+    ]
+
+
+def get_feature_set_deployability(
+    feature_set_name: str | None = None,
+) -> dict[str, object]:
+    resolved = resolve_feature_set_name(feature_set_name)
+    deployability = FEATURE_SET_DEPLOYABILITY.get(
+        resolved,
+        {
+            "deployable": False,
+            "reason": "Deployability is not defined for this feature set.",
+        },
+    )
+    return {
+        "feature_set_name": resolved,
+        "deployable": bool(deployability.get("deployable", False)),
+        "reason": str(deployability.get("reason", "")),
+    }
+
+
+def _normalise_app_number(series_like: pd.Series | np.ndarray) -> pd.Series:
+    normalised = pd.Series(series_like).fillna("").astype(str).str.strip()
+    normalised = normalised.str.lstrip("0")
+    return normalised.replace("", "0")
+
+
+def load_synthetic_feature_table(
+    path: str = SYNTHETIC_FEATURES_PATH,
+) -> tuple[pd.DataFrame | None, dict[str, object]]:
+    path_obj = Path(path)
+    info: dict[str, object] = {
+        "path": str(path_obj),
+        "loaded": False,
+        "available_columns": [],
+        "safe_available_columns": [],
+        "leaky_available_columns": [],
+        "excluded_available_columns": [],
+        "missing_recognized_columns": list(ALL_SYNTHETIC_FEATURE_COLUMNS),
+        "row_count": 0,
+    }
+    if not path_obj.exists():
+        return None, info
+
+    synthetic = pd.read_csv(path_obj)
+    if "app_number" not in synthetic.columns:
+        raise ValueError("Synthetic feature table must contain 'app_number'")
+
+    available_columns = [
+        column for column in ALL_SYNTHETIC_FEATURE_COLUMNS
+        if column in synthetic.columns
+    ]
+    keep_columns = ["app_number"] + available_columns
+    synthetic = synthetic[keep_columns].copy()
+    synthetic["app_number"] = _normalise_app_number(synthetic["app_number"])
+    synthetic = synthetic.drop_duplicates(subset="app_number", keep="last")
+
+    info["loaded"] = True
+    info["available_columns"] = available_columns
+    info["safe_available_columns"] = [
+        column for column in SAFE_SYNTHETIC_FEATURE_COLUMNS
+        if column in available_columns
+    ]
+    info["leaky_available_columns"] = [
+        column for column in LEAKY_OR_DIAGNOSTIC_SYNTHETIC_COLUMNS
+        if column in available_columns
+    ]
+    info["excluded_available_columns"] = [
+        column for column in EXCLUDED_COLUMNS
+        if column in synthetic.columns
+    ]
+    info["missing_recognized_columns"] = [
+        column for column in ALL_SYNTHETIC_FEATURE_COLUMNS
+        if column not in available_columns
+    ]
+    info["row_count"] = int(len(synthetic))
+    return synthetic, info
+
+
+def merge_synthetic_features(
+    raw_input: dict | pd.Series | pd.DataFrame,
+    extracted_features: pd.DataFrame,
+    synthetic_table: pd.DataFrame | None = None,
+    synthetic_info: dict[str, object] | None = None,
+) -> tuple[pd.DataFrame, dict[str, object]]:
+    raw_frame = _coerce_dataframe(raw_input)
+    feature_frame = extracted_features.copy()
+    info = dict(synthetic_info or {})
+    info.setdefault("merged_columns", [])
+    info.setdefault("already_present_columns", [])
+
+    if synthetic_table is None:
+        synthetic_table, loaded_info = load_synthetic_feature_table()
+        info = {**loaded_info, **info}
+
+    if synthetic_table is None or "app_number" not in raw_frame.columns:
+        info.setdefault("merge_skipped_reason", None)
+        if synthetic_table is None:
+            info["merge_skipped_reason"] = "synthetic_table_unavailable"
+        else:
+            info["merge_skipped_reason"] = "app_number_missing"
+        return feature_frame, info
+
+    app_key = _normalise_app_number(raw_frame["app_number"])
+    indexed = synthetic_table.set_index("app_number")
+    for column in [
+        candidate
+        for candidate in ALL_SYNTHETIC_FEATURE_COLUMNS
+        if candidate in indexed.columns
+    ]:
+        mapped = pd.to_numeric(app_key.map(indexed[column]), errors="coerce")
+        if column in feature_frame.columns:
+            info["already_present_columns"].append(column)
+            feature_frame[column] = (
+                pd.to_numeric(feature_frame[column], errors="coerce")
+                .fillna(mapped)
+            )
+        else:
+            feature_frame[column] = mapped
+            info["merged_columns"].append(column)
+
+    return feature_frame, info
+
+
+def _supports_sample_weight(model: object) -> bool:
+    estimator = model.named_steps["model"] if hasattr(model, "named_steps") and "model" in model.named_steps else model
+    try:
+        signature = inspect.signature(estimator.fit)
+    except (TypeError, ValueError):
+        return False
+    return "sample_weight" in signature.parameters
 
 
 def _fit_model(
@@ -106,7 +455,7 @@ def _fit_model(
     sample_weight: pd.Series | np.ndarray | None = None,
 ) -> object:
     fit_kwargs: dict[str, object] = {}
-    if sample_weight is not None:
+    if sample_weight is not None and _supports_sample_weight(model):
         if hasattr(model, "named_steps") and "model" in model.named_steps:
             fit_kwargs["model__sample_weight"] = np.asarray(sample_weight)
         else:
@@ -159,14 +508,75 @@ def _ratio_to_typicality(
     return typicality.fillna(neutral_value).astype(float)
 
 
+def prepare_extracted_features_for_feature_set(
+    extracted_features: dict | pd.Series | pd.DataFrame,
+    feature_set_name: str = DEFAULT_FEATURE_SET_NAME,
+) -> pd.DataFrame:
+    resolved_feature_set = resolve_feature_set_name(feature_set_name)
+    feature_frame = _coerce_dataframe(extracted_features).copy()
+
+    for column_name in RULE_FEATURE_COLUMNS:
+        if column_name not in feature_frame.columns:
+            feature_frame[column_name] = 0.5
+
+    for column_name in SAFE_SYNTHETIC_FEATURE_COLUMNS:
+        feature_frame[column_name] = (
+            pd.to_numeric(
+                feature_frame[column_name]
+                if column_name in feature_frame.columns
+                else pd.Series(0.5, index=feature_frame.index),
+                errors="coerce",
+            )
+            .fillna(0.5)
+            .clip(lower=0.0, upper=1.0)
+            .astype(float)
+        )
+
+    for column_name in LEAKY_RULE_SYNTHETIC_FEATURE_COLUMNS:
+        if resolved_feature_set == EXISTING_ONLY_FEATURE_SET:
+            feature_frame[column_name] = 0.5
+        else:
+            feature_frame[column_name] = (
+                pd.to_numeric(
+                    feature_frame[column_name]
+                    if column_name in feature_frame.columns
+                    else pd.Series(0.5, index=feature_frame.index),
+                    errors="coerce",
+                )
+                .fillna(0.5)
+                .clip(lower=0.0, upper=1.0)
+                .astype(float)
+            )
+
+    return feature_frame
+
+
+def build_rule_scores_for_feature_set(
+    extracted_features: dict | pd.Series | pd.DataFrame,
+    feature_set_name: str = DEFAULT_FEATURE_SET_NAME,
+) -> pd.DataFrame:
+    scoring_frame = prepare_extracted_features_for_feature_set(
+        extracted_features,
+        feature_set_name=feature_set_name,
+    )
+    return score_batch(scoring_frame)
+
+
 def build_primary_model_frame(
     raw_input: dict | pd.Series | pd.DataFrame,
     extracted_features: dict | pd.Series | pd.DataFrame | None = None,
     rule_scores: dict | pd.Series | pd.DataFrame | None = None,
+    feature_set_name: str = DEFAULT_FEATURE_SET_NAME,
+    feature_columns: list[str] | None = None,
 ) -> pd.DataFrame:
     raw_frame = _coerce_dataframe(raw_input)
-    features_frame = _coerce_feature_dataframe(extracted_features, raw_frame.index)
+    raw_features_frame = _coerce_feature_dataframe(extracted_features, raw_frame.index)
+    features_frame = prepare_extracted_features_for_feature_set(
+        raw_features_frame,
+        feature_set_name=feature_set_name,
+    ).reindex(raw_frame.index)
     rule_frame = _coerce_feature_dataframe(rule_scores, raw_frame.index)
+    resolved_feature_columns = feature_columns or FEATURE_COLUMNS
 
     amount_series = (
         raw_frame["amount"]
@@ -198,6 +608,7 @@ def build_primary_model_frame(
         )
 
     primary_frame["normative_log"] = np.log1p(normative.clip(lower=0.0)).astype(float)
+    primary_frame["amount_log"] = np.log1p(amount.clip(lower=0.0)).astype(float)
     primary_frame["amount_adequacy"] = (
         pd.to_numeric(
             features_frame["amount_adequacy"]
@@ -285,6 +696,27 @@ def build_primary_model_frame(
         .fillna(0.0)
         .astype(float)
     )
+    primary_frame["submit_month_cos"] = (
+        pd.to_numeric(
+            features_frame["submit_month_cos"]
+            if "submit_month_cos" in features_frame.columns
+            else pd.Series(1.0, index=raw_frame.index),
+            errors="coerce",
+        )
+        .fillna(1.0)
+        .astype(float)
+    )
+    primary_frame["region_specialization"] = (
+        pd.to_numeric(
+            features_frame["region_specialization"]
+            if "region_specialization" in features_frame.columns
+            else pd.Series(0.5, index=raw_frame.index),
+            errors="coerce",
+        )
+        .fillna(0.5)
+        .clip(lower=0.0, upper=1.0)
+        .astype(float)
+    )
     region_direction_approval_rate = (
         pd.to_numeric(
             features_frame["region_direction_approval_rate"]
@@ -293,6 +725,11 @@ def build_primary_model_frame(
             errors="coerce",
         )
         .fillna(0.5)
+        .astype(float)
+    )
+    primary_frame["region_direction_approval_rate"] = (
+        region_direction_approval_rate
+        .clip(lower=0.0, upper=1.0)
         .astype(float)
     )
     primary_frame["direction_approval_rate"] = (
@@ -323,6 +760,11 @@ def build_primary_model_frame(
             errors="coerce",
         )
         .fillna(0.5)
+        .astype(float)
+    )
+    primary_frame["akimat_approval_rate"] = (
+        akimat_approval_rate
+        .clip(lower=0.0, upper=1.0)
         .astype(float)
     )
     primary_frame["region_approval_rate"] = (
@@ -449,6 +891,29 @@ def build_primary_model_frame(
         .clip(lower=0.0, upper=1.0)
         .astype(float)
     )
+    primary_frame["rule_score"] = (
+        pd.to_numeric(
+            rule_frame["score"]
+            if "score" in rule_frame.columns
+            else pd.Series(50.0, index=raw_frame.index),
+            errors="coerce",
+        )
+        .fillna(50.0)
+        .clip(lower=0.0, upper=100.0)
+        .astype(float)
+    )
+    for column_name in RULE_FEATURE_COLUMNS:
+        primary_frame[column_name] = (
+            pd.to_numeric(
+                features_frame[column_name]
+                if column_name in features_frame.columns
+                else pd.Series(0.5, index=raw_frame.index),
+                errors="coerce",
+            )
+            .fillna(0.5)
+            .clip(lower=0.0, upper=1.0)
+            .astype(float)
+        )
     for column_name in RULE_AUGMENTATION_COLUMNS:
         contribution_column = column_name
         source_column = column_name
@@ -467,7 +932,24 @@ def build_primary_model_frame(
             .astype(float)
         )
 
-    return primary_frame.reindex(columns=FEATURE_COLUMNS)
+    primary_frame["criteria_complexity_x_subsidy_type_rate"] = (
+        primary_frame["criteria_complexity"]
+        * primary_frame["subsidy_type_approval_rate"]
+    ).astype(float)
+    primary_frame["direction_risk_x_mortality_compliance"] = (
+        primary_frame["direction_risk"]
+        * primary_frame["mortality_compliance"]
+    ).astype(float)
+    primary_frame["rule_score_x_budget_pressure"] = (
+        primary_frame["rule_score_feature"]
+        * primary_frame["budget_pressure"]
+    ).astype(float)
+    primary_frame["amount_log_x_rule_score"] = (
+        primary_frame["amount_log"]
+        * primary_frame["rule_score_feature"]
+    ).astype(float)
+
+    return primary_frame.reindex(columns=resolved_feature_columns)
 
 
 def build_merit_sample_weight(
@@ -647,6 +1129,38 @@ def _candidate_models(
     return models, skipped_models
 
 
+def get_available_model_candidates(
+    random_state: int = 42,
+    categorical_columns: list[str] | None = None,
+    numeric_columns: list[str] | None = None,
+) -> dict[str, object]:
+    models, skipped_models = _candidate_models(
+        random_state,
+        categorical_columns=categorical_columns,
+        numeric_columns=numeric_columns,
+    )
+    return {
+        "available_model_names": list(models.keys()),
+        "skipped_models": skipped_models,
+    }
+
+
+def model_supports_sample_weight(
+    model_name: str,
+    random_state: int = 42,
+    categorical_columns: list[str] | None = None,
+    numeric_columns: list[str] | None = None,
+) -> bool:
+    models, _ = _candidate_models(
+        random_state,
+        categorical_columns=categorical_columns,
+        numeric_columns=numeric_columns,
+    )
+    if model_name not in models:
+        return False
+    return _supports_sample_weight(models[model_name])
+
+
 def rolling_time_cv_leaderboard(
     X: pd.DataFrame,
     y: pd.Series,
@@ -725,21 +1239,55 @@ def rolling_time_cv_leaderboard(
     }
 
 
+def get_blend_rule_score_column(feature_set_name: str) -> str:
+    resolved = resolve_feature_set_name(feature_set_name)
+    return f"blend_rule_score__{resolved}"
+
+
 def build_training_dataset(data_path: str) -> dict[str, object]:
     df = run_pipeline(data_path)
     tables = build_feature_tables(df)
     features = extract_features_batch(df, tables)
-    rule_scores = score_batch(features)
+    synthetic_table, synthetic_feature_info = load_synthetic_feature_table()
+    merged_features, synthetic_feature_info = merge_synthetic_features(
+        raw_input=df,
+        extracted_features=features,
+        synthetic_table=synthetic_table,
+        synthetic_info=synthetic_feature_info,
+    )
+    rule_scores = score_batch(merged_features)
     eligibility = evaluate_batch_eligibility(df, tables["normative_lookup"])
     rule_scores[eligibility.columns] = eligibility
     deadline_disqualified = eligibility["disqualified"].fillna(False).astype(bool)
     eligible_mask = ~deadline_disqualified
 
-    X = build_primary_model_frame(
-        raw_input=df.loc[eligible_mask],
-        extracted_features=features.loc[eligible_mask],
-        rule_scores=rule_scores.loc[eligible_mask],
-    )
+    X_by_feature_set: dict[str, pd.DataFrame] = {}
+    feature_set_rule_scores: dict[str, pd.DataFrame] = {}
+    feature_set_columns: dict[str, list[str]] = {}
+    feature_set_numeric_columns: dict[str, list[str]] = {}
+    feature_set_categorical_columns: dict[str, list[str]] = {}
+
+    eligible_df = df.loc[eligible_mask]
+    eligible_features = merged_features.loc[eligible_mask]
+    for feature_set_name in FEATURE_SET_ORDER:
+        honest_rule_scores = build_rule_scores_for_feature_set(
+            eligible_features,
+            feature_set_name=feature_set_name,
+        )
+        honest_rule_scores[eligibility.columns] = eligibility.loc[eligible_mask]
+        feature_set_rule_scores[feature_set_name] = honest_rule_scores
+        feature_set_columns[feature_set_name] = get_feature_columns(feature_set_name)
+        feature_set_numeric_columns[feature_set_name] = get_numeric_feature_columns(feature_set_name)
+        feature_set_categorical_columns[feature_set_name] = get_categorical_feature_columns(feature_set_name)
+        X_by_feature_set[feature_set_name] = build_primary_model_frame(
+            raw_input=eligible_df,
+            extracted_features=eligible_features,
+            rule_scores=honest_rule_scores,
+            feature_set_name=feature_set_name,
+            feature_columns=feature_set_columns[feature_set_name],
+        )
+
+    X = X_by_feature_set[DEFAULT_FEATURE_SET_NAME]
     merit_target_frame = build_merit_target(X)
     y = df.loc[eligible_mask, "is_approved"].astype(int).copy()
 
@@ -775,6 +1323,8 @@ def build_training_dataset(data_path: str) -> dict[str, object]:
     metadata["merit_proxy_score"] = merit_target_frame["merit_proxy_score"].astype(float)
     metadata["merit_proxy_positive"] = merit_target_frame["merit_proxy_positive"].astype(int)
     metadata["training_target"] = y.astype(int)
+    for feature_set_name, honest_rule_scores in feature_set_rule_scores.items():
+        metadata[get_blend_rule_score_column(feature_set_name)] = honest_rule_scores["score"].astype(float)
 
     metadata["sample_weight"] = build_merit_sample_weight(
         y=y,
@@ -784,9 +1334,20 @@ def build_training_dataset(data_path: str) -> dict[str, object]:
     return {
         "df": df,
         "tables": tables,
-        "features": features,
+        "features": merged_features,
+        "base_features": features,
         "rule_scores": rule_scores,
         "X": X,
+        "X_by_feature_set": X_by_feature_set,
+        "feature_set_columns": feature_set_columns,
+        "feature_set_numeric_columns": feature_set_numeric_columns,
+        "feature_set_categorical_columns": feature_set_categorical_columns,
+        "feature_set_deployability": {
+            feature_set_name: get_feature_set_deployability(feature_set_name)
+            for feature_set_name in FEATURE_SET_ORDER
+        },
+        "feature_set_rule_scores": feature_set_rule_scores,
+        "synthetic_feature_info": synthetic_feature_info,
         "y": y,
         "metadata": metadata,
         "deadline_disqualified_count": int(deadline_disqualified.sum()),
@@ -859,10 +1420,17 @@ def evaluate_predictions(
     y_true: pd.Series | np.ndarray,
     y_prob: np.ndarray,
     threshold: float = 0.5,
+    score_scale_max: float | None = None,
 ) -> dict[str, object]:
     y_true_arr = np.asarray(y_true).astype(int)
     y_prob_arr = np.asarray(y_prob).astype(float)
     y_pred = (y_prob_arr >= threshold).astype(int)
+    resolved_scale_max = resolve_score_scale_max(y_prob_arr, score_scale_max)
+    normalized_scores = (
+        np.clip(y_prob_arr / resolved_scale_max, 0.0, 1.0)
+        if resolved_scale_max > 1.0 + 1e-8
+        else np.clip(y_prob_arr, 0.0, 1.0)
+    )
 
     cm = confusion_matrix(y_true_arr, y_pred, labels=[0, 1])
     tn, fp, fn, tp = cm.ravel()
@@ -893,7 +1461,7 @@ def evaluate_predictions(
         metrics["average_precision"] = round(
             float(average_precision_score(y_true_arr, y_prob_arr)), 4
         )
-        metrics["brier_score"] = round(float(brier_score_loss(y_true_arr, y_prob_arr)), 4)
+        metrics["brier_score"] = round(float(brier_score_loss(y_true_arr, normalized_scores)), 4)
     else:
         metrics["roc_auc"] = None
         metrics["average_precision"] = None
@@ -1089,20 +1657,23 @@ def tune_decision_threshold(
     y_prob: np.ndarray,
     fn_cost: float = 3.0,
     fp_cost: float = 1.0,
+    score_scale_max: float | None = None,
 ) -> dict[str, object]:
-    candidate_thresholds = np.unique(
-        np.concatenate(
-            [
-                np.array([0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.95]),
-                np.linspace(0.05, 0.95, 37),
-                np.quantile(y_prob, np.linspace(0.05, 0.95, 19)),
-            ]
-        ).round(4)
+    resolved_scale_max = resolve_score_scale_max(y_prob, score_scale_max)
+    decision_anchor = 0.5 if resolved_scale_max <= 1.0 + 1e-8 else resolved_scale_max / 2.0
+    candidate_thresholds = build_threshold_candidates(
+        y_prob,
+        score_scale_max=resolved_scale_max,
     )
 
     candidates: list[dict[str, object]] = []
     for threshold in candidate_thresholds:
-        metrics = evaluate_predictions(y_true, y_prob, threshold=float(threshold))
+        metrics = evaluate_predictions(
+            y_true,
+            y_prob,
+            threshold=float(threshold),
+            score_scale_max=resolved_scale_max,
+        )
         confusion = metrics["confusion_matrix"]
         weighted_cost = (
             float(confusion["fn"]) * float(fn_cost)
@@ -1124,7 +1695,7 @@ def tune_decision_threshold(
             item["recall"],
             item["f1"],
             -float(item["selection_cost"]),
-            -abs(float(item["threshold"]) - 0.5),
+            -abs(float(item["threshold"]) - decision_anchor),
         ),
         reverse=True,
     )
@@ -1144,18 +1715,23 @@ def tune_blend_weights(
     disqualified_mask: pd.Series | np.ndarray | None = None,
 ) -> dict[str, object]:
     y_true_arr = np.asarray(y_true).astype(int)
-    rule_arr = np.asarray(rule_scores).astype(float)
-    ml_score_arr = np.asarray(ml_probabilities).astype(float) * 100
     if disqualified_mask is None:
         disqualified_arr = np.zeros_like(y_true_arr, dtype=bool)
     else:
         disqualified_arr = np.asarray(disqualified_mask).astype(bool)
 
     candidates: list[dict[str, object]] = []
-    for rule_weight in np.linspace(MIN_RULE_BLEND_WEIGHT, 1.0, int((1.0 - MIN_RULE_BLEND_WEIGHT) / 0.05) + 1):
+    for rule_weight in BLEND_WEIGHT_SEARCH_GRID:
         ml_weight = 1.0 - rule_weight
-        blended = np.round(rule_arr * rule_weight + ml_score_arr * ml_weight, 1)
-        blended[disqualified_arr] = 0.0
+        blended = compute_blended_scores(
+            rule_scores=rule_scores,
+            ml_probabilities=ml_probabilities,
+            blend_weights={
+                "rule_score": rule_weight,
+                "ml_score": ml_weight,
+            },
+            disqualified_mask=disqualified_arr,
+        )
 
         metrics = {
             "roc_auc": round(float(roc_auc_score(y_true_arr, blended)), 4),
@@ -1348,9 +1924,13 @@ def build_explanation_neutral_values(
     return neutral_values
 
 
-def prepare_feature_frame(features_input: dict | pd.Series | pd.DataFrame) -> pd.DataFrame:
+def prepare_feature_frame(
+    features_input: dict | pd.Series | pd.DataFrame,
+    feature_columns: list[str] | None = None,
+) -> pd.DataFrame:
     feature_frame = _coerce_dataframe(features_input)
-    return feature_frame.reindex(columns=FEATURE_COLUMNS).copy()
+    resolved_feature_columns = feature_columns or FEATURE_COLUMNS
+    return feature_frame.reindex(columns=resolved_feature_columns).copy()
 
 
 def explain_prediction_with_model(
@@ -1359,8 +1939,12 @@ def explain_prediction_with_model(
     neutral_values: dict[str, object] | None = None,
     probability_calibrator: ProbabilityCalibrator | None = None,
     probability_temperature: float | None = None,
+    feature_columns: list[str] | None = None,
 ) -> dict[str, object]:
-    feature_frame = prepare_feature_frame(features_input)
+    feature_frame = prepare_feature_frame(
+        features_input,
+        feature_columns=feature_columns,
+    )
     if len(feature_frame) != 1:
         raise ValueError("explain_prediction_with_model supports exactly one row")
 
@@ -1449,16 +2033,20 @@ def score_features_with_model(
     features_input: dict | pd.Series | pd.DataFrame,
     model: object,
     rule_scores: pd.DataFrame | None = None,
+    blend_rule_scores: pd.DataFrame | None = None,
     blend_weights: dict[str, float] | None = None,
-    decision_threshold: float = 0.5,
+    decision_threshold: float = DEFAULT_DECISION_THRESHOLD,
     probability_calibrator: ProbabilityCalibrator | None = None,
     probability_temperature: float = 1.0,
     disqualified_mask: pd.Series | np.ndarray | list[bool] | None = None,
+    feature_columns: list[str] | None = None,
 ) -> pd.DataFrame:
-    if blend_weights is None:
-        blend_weights = DEFAULT_BLEND_WEIGHTS
+    blend_weights = resolve_blend_weights(blend_weights)
 
-    feature_frame = prepare_feature_frame(features_input)
+    feature_frame = prepare_feature_frame(
+        features_input,
+        feature_columns=feature_columns,
+    )
     resolved_disqualified_mask = resolve_disqualification_mask(
         features_input=features_input,
         rule_scores=rule_scores,
@@ -1476,15 +2064,24 @@ def score_features_with_model(
     else:
         rule_scores = rule_scores.copy()
 
+    if blend_rule_scores is None:
+        blend_rule_scores = rule_scores.copy()
+    else:
+        blend_rule_scores = blend_rule_scores.copy()
+
     result = pd.DataFrame(index=feature_frame.index)
     result["rule_score"] = rule_scores["score"].astype(float)
     result["rule_risk_level"] = rule_scores["risk_level"].astype(str)
+    result["blend_rule_score"] = blend_rule_scores["score"].astype(float)
     result["ml_probability"] = np.nan
     result["ml_score"] = np.nan
+    result["decision_score_name"] = DEFAULT_DECISION_SCORE_NAME
+    result["decision_threshold"] = float(decision_threshold)
+    result["decision_predicted_positive"] = False
     result["ml_decision_threshold"] = float(decision_threshold)
     result["ml_predicted_positive"] = False
     result["final_score"] = np.round(
-        rule_scores["score"].astype(float) * blend_weights["rule_score"],
+        blend_rule_scores["score"].astype(float) * blend_weights["rule_score"],
         1,
     )
     result["final_risk_level"] = result["final_score"].apply(score_to_risk_label)
@@ -1522,13 +2119,16 @@ def score_features_with_model(
         ml_score = np.round(ml_prob * 100, 1)
         result.loc[eligible_mask, "ml_probability"] = np.round(ml_prob, 4)
         result.loc[eligible_mask, "ml_score"] = ml_score
-        result.loc[eligible_mask, "ml_predicted_positive"] = (
-            result.loc[eligible_mask, "ml_probability"] >= float(decision_threshold)
+        result.loc[eligible_mask, "final_score"] = compute_blended_scores(
+            rule_scores=result.loc[eligible_mask, "blend_rule_score"].astype(float),
+            ml_probabilities=result.loc[eligible_mask, "ml_probability"].astype(float),
+            blend_weights=blend_weights,
         )
-        result.loc[eligible_mask, "final_score"] = np.round(
-            result.loc[eligible_mask, "rule_score"].astype(float) * blend_weights["rule_score"]
-            + result.loc[eligible_mask, "ml_score"].astype(float) * blend_weights["ml_score"],
-            1,
+        result.loc[eligible_mask, "decision_predicted_positive"] = (
+            result.loc[eligible_mask, "final_score"].astype(float) >= float(decision_threshold)
+        )
+        result.loc[eligible_mask, "ml_predicted_positive"] = (
+            result.loc[eligible_mask, "decision_predicted_positive"].astype(bool)
         )
         result.loc[eligible_mask, "final_risk_level"] = result.loc[
             eligible_mask, "final_score"
@@ -1538,6 +2138,7 @@ def score_features_with_model(
     if disqualified_mask.any():
         result.loc[disqualified_mask, "final_score"] = 0.0
         result.loc[disqualified_mask, "final_risk_level"] = "Высокий"
+        result.loc[disqualified_mask, "decision_predicted_positive"] = False
         result.loc[disqualified_mask, "ml_predicted_positive"] = False
 
     result["score"] = result["final_score"]
@@ -1550,30 +2151,44 @@ def build_prediction_frame(
     df: pd.DataFrame,
     tables: dict,
     model: object,
+    feature_set_name: str = DEFAULT_FEATURE_SET_NAME,
+    feature_columns: list[str] | None = None,
     blend_weights: dict[str, float] | None = None,
-    decision_threshold: float = 0.5,
+    decision_threshold: float = DEFAULT_DECISION_THRESHOLD,
     probability_calibrator: ProbabilityCalibrator | None = None,
     probability_temperature: float = 1.0,
 ) -> pd.DataFrame:
+    resolved_feature_set = resolve_feature_set_name(feature_set_name)
+    resolved_feature_columns = feature_columns or get_feature_columns(resolved_feature_set)
     features = extract_features_batch(df, tables)
+    merged_features, _ = merge_synthetic_features(df, features)
     advisory = build_history_advisory_batch(df)
-    rule_scores = score_batch(features)
+    rule_scores = score_batch(merged_features)
     eligibility = evaluate_batch_eligibility(df, tables["normative_lookup"])
     rule_scores[eligibility.columns] = eligibility
+    blend_rule_scores = build_rule_scores_for_feature_set(
+        merged_features,
+        feature_set_name=resolved_feature_set,
+    )
+    blend_rule_scores[eligibility.columns] = eligibility
     model_input = build_primary_model_frame(
         raw_input=df,
-        extracted_features=features,
-        rule_scores=rule_scores,
+        extracted_features=merged_features,
+        rule_scores=blend_rule_scores,
+        feature_set_name=resolved_feature_set,
+        feature_columns=resolved_feature_columns,
     )
     blended_scores = score_features_with_model(
         model_input,
         model=model,
         rule_scores=rule_scores,
+        blend_rule_scores=blend_rule_scores,
         blend_weights=blend_weights,
         decision_threshold=decision_threshold,
         probability_calibrator=probability_calibrator,
         probability_temperature=probability_temperature,
         disqualified_mask=rule_scores["disqualified"],
+        feature_columns=resolved_feature_columns,
     )
 
     result = df[
@@ -1599,8 +2214,9 @@ def save_bundle(
     model_name: str,
     output_path: str | Path,
     feature_columns: list[str] | None = None,
+    feature_set_name: str = DEFAULT_FEATURE_SET_NAME,
     blend_weights: dict[str, float] | None = None,
-    decision_threshold: float = 0.5,
+    decision_threshold: float = DEFAULT_DECISION_THRESHOLD,
     probability_calibrator: ProbabilityCalibrator | None = None,
     probability_temperature: float = 1.0,
     calibration_method: str | None = None,
@@ -1609,13 +2225,21 @@ def save_bundle(
 ) -> Path:
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
+    feature_set_meta = get_feature_set_deployability(feature_set_name)
 
     payload = {
         "model": model,
         "model_name": model_name,
         "feature_columns": feature_columns or FEATURE_COLUMNS,
+        "feature_set_name": resolve_feature_set_name(feature_set_name),
+        "feature_set_deployable": bool(feature_set_meta["deployable"]),
+        "feature_set_deployability_reason": str(feature_set_meta["reason"]),
         "tables": tables,
-        "blend_weights": blend_weights or DEFAULT_BLEND_WEIGHTS,
+        "blend_weights": resolve_blend_weights(blend_weights),
+        "ranking_score_name": DEFAULT_DECISION_SCORE_NAME,
+        "decision_score_name": DEFAULT_DECISION_SCORE_NAME,
+        "decision_threshold_score_name": DEFAULT_DECISION_SCORE_NAME,
+        "decision_threshold_scale_max": float(DECISION_SCORE_SCALE_MAX),
         "decision_threshold": float(decision_threshold),
         "probability_calibrator": probability_calibrator,
         "probability_temperature": float(probability_temperature),

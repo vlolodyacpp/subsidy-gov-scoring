@@ -31,9 +31,14 @@ from src.features import (
 )
 from src.modeling import (
     DEFAULT_BLEND_WEIGHTS,
+    DEFAULT_DECISION_SCORE_NAME,
+    DEFAULT_DECISION_THRESHOLD,
+    DEFAULT_FEATURE_SET_NAME,
     build_primary_model_frame,
+    build_rule_scores_for_feature_set,
     explain_prediction_with_model,
     load_bundle,
+    merge_synthetic_features,
     score_features_with_model,
 )
 from src.normatives import get_normative_for_type
@@ -80,10 +85,31 @@ def _load_model_bundle_if_available(model_path: str) -> dict | None:
             bundle.get("model_name", "unknown"),
             path,
         )
+        if bundle.get("feature_set_deployable") is False:
+            logger.warning(
+                "Загружен non-deployable bundle (%s): %s",
+                bundle.get("feature_set_name"),
+                bundle.get("feature_set_deployability_reason"),
+            )
         return bundle
     except Exception:
         logger.exception("Не удалось загрузить ML-модель из %s. Фолбэк на rule-based.", path)
         return None
+
+
+def _bundle_feature_set_name(model_bundle: dict | None) -> str:
+    if not model_bundle:
+        return DEFAULT_FEATURE_SET_NAME
+    return str(model_bundle.get("feature_set_name", DEFAULT_FEATURE_SET_NAME))
+
+
+def _bundle_feature_columns(model_bundle: dict | None) -> list[str] | None:
+    if not model_bundle:
+        return None
+    feature_columns = model_bundle.get("feature_columns")
+    if feature_columns is None:
+        return None
+    return list(feature_columns)
 
 
 def _get_scoring_engine() -> str:
@@ -141,6 +167,7 @@ def _average_latency(event_name: str) -> float | None:
 def _prepare_api_scores(
     model_input: pd.DataFrame,
     rule_scores: pd.DataFrame,
+    blend_rule_scores: pd.DataFrame,
     advisory: pd.DataFrame,
     model_bundle: dict | None,
 ) -> pd.DataFrame:
@@ -149,6 +176,9 @@ def _prepare_api_scores(
     scores["rule_risk_level"] = scores["risk_level"].astype(str)
     scores["ml_probability"] = pd.NA
     scores["ml_score"] = pd.NA
+    scores["decision_score_name"] = DEFAULT_DECISION_SCORE_NAME
+    scores["decision_threshold"] = pd.NA
+    scores["decision_predicted_positive"] = pd.NA
     scores["ml_decision_threshold"] = pd.NA
     scores["ml_predicted_positive"] = pd.NA
 
@@ -159,14 +189,19 @@ def _prepare_api_scores(
         features_input=model_input,
         model=model_bundle["model"],
         rule_scores=rule_scores,
+        blend_rule_scores=blend_rule_scores,
         blend_weights=model_bundle.get("blend_weights", DEFAULT_BLEND_WEIGHTS),
-        decision_threshold=model_bundle.get("decision_threshold", 0.5),
+        decision_threshold=model_bundle.get("decision_threshold", DEFAULT_DECISION_THRESHOLD),
         probability_calibrator=model_bundle.get("probability_calibrator"),
         probability_temperature=model_bundle.get("probability_temperature", 1.0),
         disqualified_mask=rule_scores["disqualified"],
+        feature_columns=_bundle_feature_columns(model_bundle),
     )
     scores["ml_probability"] = blended_scores["ml_probability"]
     scores["ml_score"] = blended_scores["ml_score"]
+    scores["decision_score_name"] = blended_scores["decision_score_name"]
+    scores["decision_threshold"] = blended_scores["decision_threshold"]
+    scores["decision_predicted_positive"] = blended_scores["decision_predicted_positive"]
     scores["ml_decision_threshold"] = blended_scores["ml_decision_threshold"]
     scores["ml_predicted_positive"] = blended_scores["ml_predicted_positive"]
     scores["score"] = blended_scores["score"]
@@ -413,6 +448,7 @@ def _build_single_rule_scores_frame(
 def _score_single_payload(
     model_input: dict | pd.Series | pd.DataFrame,
     rule_result,
+    blend_rule_scores_frame: pd.DataFrame | None,
     eligibility_payload: dict[str, object],
     history_payload: dict[str, object],
 ) -> dict[str, object]:
@@ -453,10 +489,12 @@ def _score_single_payload(
         features_input=model_input,
         model=model_bundle["model"],
         rule_scores=rule_scores_frame,
+        blend_rule_scores=blend_rule_scores_frame,
         blend_weights=model_bundle.get("blend_weights", DEFAULT_BLEND_WEIGHTS),
-        decision_threshold=model_bundle.get("decision_threshold", 0.5),
+        decision_threshold=model_bundle.get("decision_threshold", DEFAULT_DECISION_THRESHOLD),
         probability_calibrator=model_bundle.get("probability_calibrator"),
         probability_temperature=model_bundle.get("probability_temperature", 1.0),
+        feature_columns=_bundle_feature_columns(model_bundle),
     ).iloc[0]
     payload["score"] = float(blended_row["score"])
     payload["risk_level"] = _single_risk_label(blended_row["risk_level"])
@@ -553,18 +591,12 @@ def _load_dataset_into_state(app_instance: FastAPI, data_path: str) -> int:
     logger.info("Feature engineering v4.0 ...")
     tables = build_feature_tables(df)
     features = extract_features_batch(df, tables)
+    merged_features, _ = merge_synthetic_features(df, features)
     advisory = build_history_advisory_batch(df)
     advisory_tables = build_history_advisory_tables(df)
     eligibility = evaluate_batch_eligibility(df, tables["normative_lookup"])
 
     logger.info("Batch merit scoring v4.0 ...")
-    rule_scores = score_batch(features)
-    rule_scores[eligibility.columns] = eligibility
-    model_input = build_primary_model_frame(
-        raw_input=df,
-        extracted_features=features,
-        rule_scores=rule_scores,
-    )
     model_bundle = getattr(app_instance.state, "model_bundle", None)
     if model_bundle is None:
         model_bundle = _load_model_bundle_if_available(MODEL_PATH)
@@ -573,12 +605,34 @@ def _load_dataset_into_state(app_instance: FastAPI, data_path: str) -> int:
             "ML bundle is required for API startup. "
             "Сначала обучите модель через `python train.py`."
         )
+    feature_set_name = _bundle_feature_set_name(model_bundle)
+    feature_columns = _bundle_feature_columns(model_bundle)
+    rule_scores = score_batch(merged_features)
+    rule_scores[eligibility.columns] = eligibility
+    blend_rule_scores = build_rule_scores_for_feature_set(
+        merged_features,
+        feature_set_name=feature_set_name,
+    )
+    blend_rule_scores[eligibility.columns] = eligibility
+    model_input = build_primary_model_frame(
+        raw_input=df,
+        extracted_features=merged_features,
+        rule_scores=blend_rule_scores,
+        feature_set_name=feature_set_name,
+        feature_columns=feature_columns,
+    )
 
-    scores = _prepare_api_scores(model_input, rule_scores, advisory, model_bundle)
+    scores = _prepare_api_scores(
+        model_input,
+        rule_scores,
+        blend_rule_scores,
+        advisory,
+        model_bundle,
+    )
 
     app_instance.state.df = df
     app_instance.state.tables = tables
-    app_instance.state.features = features
+    app_instance.state.features = merged_features
     app_instance.state.model_input = model_input
     app_instance.state.history_df = df.reindex(
         columns=[
@@ -968,22 +1022,46 @@ async def score_application(request: ScoreRequest):
         app.state.advisory_tables,
     )
     rule_result = score_single(features_dict)
+    model_bundle = getattr(app.state, "model_bundle", None)
+    feature_set_name = _bundle_feature_set_name(model_bundle)
+    feature_columns = _bundle_feature_columns(model_bundle)
     single_rule_scores = _build_single_rule_scores_frame(
         rule_result=rule_result,
         eligibility_payload=eligibility_payload,
     )
+    blend_rule_scores = build_rule_scores_for_feature_set(
+        pd.DataFrame([features_dict]),
+        feature_set_name=feature_set_name,
+    )
+    blend_rule_scores[[
+        "disqualified",
+        "disqualification_reason",
+        "eligibility_status",
+        "manual_review_required",
+        "eligibility_note",
+        "normative_reference_found",
+    ]] = single_rule_scores[[
+        "disqualified",
+        "disqualification_reason",
+        "eligibility_status",
+        "manual_review_required",
+        "eligibility_note",
+        "normative_reference_found",
+    ]].to_numpy()
     model_input = build_primary_model_frame(
         raw_input=row,
         extracted_features=features_dict,
-        rule_scores=single_rule_scores,
+        rule_scores=blend_rule_scores,
+        feature_set_name=feature_set_name,
+        feature_columns=feature_columns,
     )
     score_payload = _score_single_payload(
         model_input=model_input,
         rule_result=rule_result,
+        blend_rule_scores_frame=blend_rule_scores,
         eligibility_payload=eligibility_payload,
         history_payload=history_payload,
     )
-    model_bundle = getattr(app.state, "model_bundle", None)
     model_explanation = None
     if model_bundle and not score_payload["disqualified"]:
         model_explanation = explain_prediction_with_model(
@@ -992,6 +1070,7 @@ async def score_application(request: ScoreRequest):
             neutral_values=model_bundle.get("explanation_neutral_values"),
             probability_calibrator=model_bundle.get("probability_calibrator"),
             probability_temperature=model_bundle.get("probability_temperature"),
+            feature_columns=feature_columns,
         )
     explanation = [DECISION_SUPPORT_NOTE]
     if score_payload["disqualified"] and score_payload["disqualification_reason"]:
@@ -1092,25 +1171,49 @@ async def explain_score(app_id: str):
     rule_result = score_single(features_dict)
     score_payload = _score_payload_from_index(idx, rule_result)
     model_bundle = getattr(app.state, "model_bundle", None)
+    feature_set_name = _bundle_feature_set_name(model_bundle)
+    feature_columns = _bundle_feature_columns(model_bundle)
     model_explanation = None
     if model_bundle and not score_payload["disqualified"]:
         if idx in app.state.model_input.index:
             explanation_features = app.state.model_input.loc[[idx]]
         else:
+            single_rule_scores = _build_single_rule_scores_frame(
+                rule_result=rule_result,
+                eligibility_payload={
+                    "disqualified": score_payload["disqualified"],
+                    "disqualification_reason": score_payload["disqualification_reason"],
+                    "eligibility_status": score_payload["eligibility_status"],
+                    "manual_review_required": score_payload["manual_review_required"],
+                    "eligibility_note": score_payload["eligibility_note"],
+                    "normative_reference_found": score_payload["normative_reference_found"],
+                },
+            )
+            blend_rule_scores = build_rule_scores_for_feature_set(
+                pd.DataFrame([features_dict]),
+                feature_set_name=feature_set_name,
+            )
+            blend_rule_scores[[
+                "disqualified",
+                "disqualification_reason",
+                "eligibility_status",
+                "manual_review_required",
+                "eligibility_note",
+                "normative_reference_found",
+            ]] = single_rule_scores[[
+                "disqualified",
+                "disqualification_reason",
+                "eligibility_status",
+                "manual_review_required",
+                "eligibility_note",
+                "normative_reference_found",
+            ]].to_numpy()
             explanation_features = build_primary_model_frame(
                 raw_input=row,
                 extracted_features=features_dict,
-                rule_scores=_build_single_rule_scores_frame(
-                    rule_result=rule_result,
-                    eligibility_payload={
-                        "disqualified": score_payload["disqualified"],
-                        "disqualification_reason": score_payload["disqualification_reason"],
-                        "eligibility_status": score_payload["eligibility_status"],
-                        "manual_review_required": score_payload["manual_review_required"],
-                        "eligibility_note": score_payload["eligibility_note"],
-                        "normative_reference_found": score_payload["normative_reference_found"],
-                    },
-                ),
+                rule_scores=blend_rule_scores,
+                feature_set_name=feature_set_name,
+                feature_columns=feature_columns,
             )
         model_explanation = explain_prediction_with_model(
             features_input=explanation_features,
@@ -1118,6 +1221,7 @@ async def explain_score(app_id: str):
             neutral_values=model_bundle.get("explanation_neutral_values"),
             probability_calibrator=model_bundle.get("probability_calibrator"),
             probability_temperature=model_bundle.get("probability_temperature"),
+            feature_columns=feature_columns,
         )
     explanation = [DECISION_SUPPORT_NOTE]
     if score_payload["disqualified"] and score_payload["disqualification_reason"]:

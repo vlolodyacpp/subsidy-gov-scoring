@@ -1,6 +1,10 @@
 import argparse
 
-from src.modeling import build_prediction_frame, load_bundle
+from src.modeling import (
+    DEFAULT_DECISION_THRESHOLD,
+    build_prediction_frame,
+    load_bundle,
+)
 from src.pipeline import run_pipeline
 
 
@@ -37,8 +41,10 @@ def main():
         df=df,
         tables=bundle["tables"],
         model=bundle["model"],
+        feature_set_name=bundle.get("feature_set_name"),
+        feature_columns=bundle.get("feature_columns"),
         blend_weights=bundle.get("blend_weights"),
-        decision_threshold=bundle.get("decision_threshold", 0.5),
+        decision_threshold=bundle.get("decision_threshold", DEFAULT_DECISION_THRESHOLD),
         probability_calibrator=bundle.get("probability_calibrator"),
         probability_temperature=bundle.get("probability_temperature", 1.0),
     )

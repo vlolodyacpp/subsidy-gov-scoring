@@ -20,6 +20,7 @@ def run_cli(data_path: str, model_path: str = MODEL_PATH):
     from src.eligibility import evaluate_batch_eligibility
     from src.advisory import build_history_advisory_batch
     from src.modeling import (
+        DEFAULT_DECISION_THRESHOLD,
         build_primary_model_frame,
         score_features_with_model,
         load_bundle,
@@ -79,7 +80,7 @@ def run_cli(data_path: str, model_path: str = MODEL_PATH):
         print("\n[4/5] ML blended скоринг (neural network)...")
         model = bundle["model"]
         blend_weights = bundle.get("blend_weights", {"rule_score": 0.25, "ml_score": 0.75})
-        decision_threshold = bundle.get("decision_threshold", 0.5)
+        decision_threshold = bundle.get("decision_threshold", DEFAULT_DECISION_THRESHOLD)
         probability_calibrator = bundle.get("probability_calibrator")
         probability_temperature = bundle.get("probability_temperature", 1.0)
 
@@ -107,8 +108,8 @@ def run_cli(data_path: str, model_path: str = MODEL_PATH):
         print(f"  Диапазон: {scores['final_score'].min():.1f} — {scores['final_score'].max():.1f}")
         risk_dist = scores["final_risk_level"].value_counts().to_dict()
         print(f"  Риск-распределение (blended): {risk_dist}")
-        ml_positive = scores["ml_predicted_positive"].sum()
-        print(f"  ML predicted positive: {ml_positive}/{len(scores)}")
+        decision_positive = scores["decision_predicted_positive"].sum()
+        print(f"  Decision positive by final_score: {decision_positive}/{len(scores)}")
     else:
         print("\n[4/5] ML скоринг пропущен (модель не найдена)...")
         scores = rule_scores

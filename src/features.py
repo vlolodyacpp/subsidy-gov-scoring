@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import os
+from functools import lru_cache
 
 from src.normatives import (
     build_normative_lookup,
@@ -9,16 +10,90 @@ from src.normatives import (
 )
 
 SYNTHETIC_FEATURES_PATH = "data/cleaned/synthetic_features.csv"
+PASTURE_NORMS_PATH = "data/cleaned/pasture_norms.csv"
+MORTALITY_NORMS_PATH = "data/cleaned/mortality_norms.csv"
+ELIGIBILITY_CRITERIA_PATH = "data/cleaned/eligibility_criteria.csv"
 
-# новые признаки из cond-файлов (все [0, 1])
-CONDITION_FEATURE_COLUMNS = [
+LEAKY_CONDITION_FEATURE_COLUMNS = [
     "pasture_compliance",
     "mortality_compliance",
     "grazing_utilization",
+]
+SAFE_CONDITION_FEATURE_COLUMNS = [
     "criteria_complexity",
     "direction_risk",
     "regional_pasture_capacity",
 ]
+CONDITION_REFERENCE_COLUMNS = [
+    "pasture_norm",
+    "grazing_days",
+    "mortality_mean",
+    "mortality_max",
+    "avg_criteria_count",
+]
+
+# новые признаки из cond-файлов (все [0, 1])
+CONDITION_FEATURE_COLUMNS = [
+    *LEAKY_CONDITION_FEATURE_COLUMNS,
+    *SAFE_CONDITION_FEATURE_COLUMNS,
+]
+
+REGION_MAP = {
+    "Акмолинская область": "Акмолинская",
+    "Актюбинская область": "Актюбинская",
+    "Алматинская область": "Алматинская",
+    "Атырауская область": "Атырауская",
+    "Восточно-Казахстанская область": "Восточно-Казахстанская",
+    "Жамбылская область": "Жамбылская",
+    "Западно-Казахстанская область": "Западно-Казахстанская",
+    "Карагандинская область": "Карагандинская",
+    "Костанайская область": "Костанайская",
+    "Кызылординская область": "Кызылординская",
+    "Мангистауская область": "Мангистауская",
+    "Павлодарская область": "Павлодарская",
+    "Северо-Казахстанская область": "Северо-Казахстанская",
+    "Туркестанская область": "Туркестанская",
+    "г.Шымкент": "Туркестанская",
+    "область Абай": "Абай",
+    "область Жетісу": "Жетісу",
+    "область Ұлытау": "Ұлытау",
+}
+
+DIRECTION_MORTALITY_MAP = {
+    "Субсидирование в скотоводстве": "Мясное и молочное скотоводство",
+    "Субсидирование в овцеводстве": "Овцеводство и козоводство",
+    "Субсидирование в козоводстве": "Овцеводство и козоводство",
+    "Субсидирование в коневодстве": "Коневодство",
+    "Субсидирование в верблюдоводстве": "Верблюдоводство",
+    "Субсидирование в свиноводстве": "Свиноводство",
+    "Субсидирование в птицеводстве": "Птицеводство",
+    "Субсидирование в пчеловодстве": "Пчеловодство",
+    "Субсидирование затрат по искусственному осеменению": "Мясное и молочное скотоводство",
+}
+
+DIRECTION_PASTURE_ANIMAL = {
+    "Субсидирование в скотоводстве": "cattle",
+    "Субсидирование в овцеводстве": "sheep_goats",
+    "Субсидирование в козоводстве": "sheep_goats",
+    "Субсидирование в коневодстве": "horses",
+    "Субсидирование в верблюдоводстве": "camels",
+    "Субсидирование в свиноводстве": "cattle",
+    "Субсидирование в птицеводстве": "cattle",
+    "Субсидирование в пчеловодстве": "cattle",
+    "Субсидирование затрат по искусственному осеменению": "cattle",
+}
+
+DIRECTION_CRITERIA_MAP = {
+    "Мясное и мясо-молочное скотоводство": "Субсидирование в скотоводстве",
+    "Молочное и молочно-мясное скотоводство": "Субсидирование в скотоводстве",
+    "Скотоводство": "Субсидирование в скотоводстве",
+    "Овцеводство": "Субсидирование в овцеводстве",
+    "Коневодство": "Субсидирование в коневодстве",
+    "Верблюдоводство": "Субсидирование в верблюдоводстве",
+    "Свиноводство": "Субсидирование в свиноводстве",
+    "Мясное птицеводство": "Субсидирование в птицеводстве",
+    "Яичное птицеводство": "Субсидирование в птицеводстве",
+}
 
 
 def _sort_by_submit_order(df: pd.DataFrame) -> pd.DataFrame:
@@ -234,13 +309,185 @@ def compute_queue_position(df: pd.DataFrame) -> pd.Series:
     return result.reindex(df.index).astype(float)
 
 
-def load_condition_features(path: str = SYNTHETIC_FEATURES_PATH) -> pd.DataFrame | None:
-    """Загружает condition-признаки из CSV (синтетические или реальные)."""
+def _count_criteria(text: str) -> int:
+    if pd.isna(text) or not text:
+        return 0
+    return int(
+        pd.Series([str(text)])
+        .str.count(r"(?:^|\s)\d+\.\s")
+        .fillna(0)
+        .astype(int)
+        .iloc[0]
+    )
+
+
+@lru_cache(maxsize=1)
+def load_condition_context_tables() -> dict[str, object] | None:
+    if not (
+        os.path.exists(PASTURE_NORMS_PATH)
+        and os.path.exists(MORTALITY_NORMS_PATH)
+        and os.path.exists(ELIGIBILITY_CRITERIA_PATH)
+    ):
+        return None
+
+    pasture = pd.read_csv(PASTURE_NORMS_PATH)
+    pasture_avg = (
+        pasture.groupby("oblast")
+        .agg(
+            cattle_norm=("cattle_restored", "mean"),
+            sheep_goats_norm=("sheep_goats_restored", "mean"),
+            horses_norm=("horses_restored", "mean"),
+            camels_norm=("camels_restored", "mean"),
+            grazing_days=("grazing_period_days", "mean"),
+        )
+        .reset_index()
+    )
+
+    mortality = pd.read_csv(MORTALITY_NORMS_PATH)
+    mortality_agg = (
+        mortality.groupby("direction")
+        .agg(
+            mortality_mean=("mortality_pct", "mean"),
+            mortality_max=("mortality_pct", "max"),
+        )
+        .reset_index()
+    )
+
+    criteria = pd.read_csv(ELIGIBILITY_CRITERIA_PATH)
+    criteria["criteria_count"] = criteria["criteria"].apply(_count_criteria)
+    criteria["main_direction"] = criteria["direction"].map(DIRECTION_CRITERIA_MAP)
+    criteria_by_direction = (
+        criteria.groupby("main_direction")["criteria_count"]
+        .mean()
+        .reset_index()
+        .rename(
+            columns={
+                "main_direction": "direction",
+                "criteria_count": "avg_criteria_count",
+            }
+        )
+    )
+
+    pasture_norm_values = []
+    for animal in ["cattle", "sheep_goats", "horses", "camels"]:
+        column_name = f"{animal}_norm"
+        if column_name in pasture_avg.columns:
+            pasture_norm_values.extend(pasture_avg[column_name].dropna().tolist())
+
+    pasture_norm_median = float(np.median(pasture_norm_values)) if pasture_norm_values else 100.0
+    grazing_days_median = float(pasture_avg["grazing_days"].median()) if "grazing_days" in pasture_avg.columns else 200.0
+    mortality_mean_median = float(mortality_agg["mortality_mean"].median()) if "mortality_mean" in mortality_agg.columns else 30.0
+    mortality_max_median = float(mortality_agg["mortality_max"].median()) if "mortality_max" in mortality_agg.columns else 80.0
+    criteria_count_median = float(criteria_by_direction["avg_criteria_count"].median()) if "avg_criteria_count" in criteria_by_direction.columns else 5.0
+
+    return {
+        "pasture_avg": pasture_avg,
+        "mortality_agg": mortality_agg,
+        "criteria_by_direction": criteria_by_direction,
+        "defaults": {
+            "pasture_norm": pasture_norm_median,
+            "grazing_days": grazing_days_median,
+            "mortality_mean": mortality_mean_median,
+            "mortality_max": mortality_max_median,
+            "avg_criteria_count": criteria_count_median,
+        },
+        "max_values": {
+            "pasture_norm": max(float(max(pasture_norm_values)), pasture_norm_median) if pasture_norm_values else pasture_norm_median,
+            "mortality_mean": max(float(mortality_agg["mortality_mean"].max()), mortality_mean_median) if not mortality_agg.empty else mortality_mean_median,
+            "avg_criteria_count": max(float(criteria_by_direction["avg_criteria_count"].max()), criteria_count_median) if not criteria_by_direction.empty else criteria_count_median,
+        },
+    }
+
+
+def build_condition_context_features(df: pd.DataFrame) -> pd.DataFrame:
+    tables = load_condition_context_tables()
+    context = pd.DataFrame(index=df.index)
+    if tables is None:
+        for column_name in CONDITION_REFERENCE_COLUMNS:
+            context[column_name] = np.nan
+        for column_name in SAFE_CONDITION_FEATURE_COLUMNS:
+            context[column_name] = 0.5
+        return context
+
+    pasture_avg = tables["pasture_avg"]
+    mortality_agg = tables["mortality_agg"]
+    criteria_by_direction = tables["criteria_by_direction"]
+    defaults = tables["defaults"]
+    max_values = tables["max_values"]
+
+    working = df[["region", "direction"]].copy()
+    working["oblast_key"] = working["region"].map(REGION_MAP)
+    working["pasture_animal"] = working["direction"].map(DIRECTION_PASTURE_ANIMAL)
+    working = working.merge(
+        pasture_avg,
+        left_on="oblast_key",
+        right_on="oblast",
+        how="left",
+    )
+    working["pasture_norm"] = np.nan
+    for animal in ["cattle", "sheep_goats", "horses", "camels"]:
+        mask = working["pasture_animal"] == animal
+        if not mask.any():
+            continue
+        working.loc[mask, "pasture_norm"] = working.loc[mask, f"{animal}_norm"]
+
+    working["pasture_norm"] = pd.to_numeric(working["pasture_norm"], errors="coerce").fillna(defaults["pasture_norm"])
+    working["grazing_days"] = pd.to_numeric(working["grazing_days"], errors="coerce").fillna(defaults["grazing_days"])
+
+    working["mortality_direction"] = working["direction"].map(DIRECTION_MORTALITY_MAP)
+    working = working.merge(
+        mortality_agg,
+        left_on="mortality_direction",
+        right_on="direction",
+        how="left",
+        suffixes=("", "_mort"),
+    )
+    working["mortality_mean"] = pd.to_numeric(working["mortality_mean"], errors="coerce").fillna(defaults["mortality_mean"])
+    working["mortality_max"] = pd.to_numeric(working["mortality_max"], errors="coerce").fillna(defaults["mortality_max"])
+
+    working = working.merge(
+        criteria_by_direction,
+        left_on="direction",
+        right_on="direction",
+        how="left",
+    )
+    working["avg_criteria_count"] = (
+        pd.to_numeric(working["avg_criteria_count"], errors="coerce")
+        .fillna(defaults["avg_criteria_count"])
+    )
+
+    context["pasture_norm"] = working["pasture_norm"].astype(float).to_numpy()
+    context["grazing_days"] = working["grazing_days"].astype(float).to_numpy()
+    context["mortality_mean"] = working["mortality_mean"].astype(float).to_numpy()
+    context["mortality_max"] = working["mortality_max"].astype(float).to_numpy()
+    context["avg_criteria_count"] = working["avg_criteria_count"].astype(float).to_numpy()
+
+    max_criteria = max(float(max_values["avg_criteria_count"]), 1.0)
+    max_mortality = max(float(max_values["mortality_mean"]), 0.1)
+    max_pasture_norm = max(float(max_values["pasture_norm"]), 1.0)
+
+    context["criteria_complexity"] = (
+        1.0 - (context["avg_criteria_count"] / max_criteria)
+    ).clip(0.0, 1.0).fillna(0.5)
+    context["direction_risk"] = (
+        1.0 - (context["mortality_mean"] / max_mortality)
+    ).clip(0.0, 1.0).fillna(0.5)
+    context["regional_pasture_capacity"] = (
+        1.0 - (context["pasture_norm"] / max_pasture_norm)
+    ).clip(0.0, 1.0).fillna(0.5)
+    return context
+
+
+def load_condition_features(
+    path: str = SYNTHETIC_FEATURES_PATH,
+    columns: list[str] | None = None,
+) -> pd.DataFrame | None:
+    """Загружает condition-признаки из cleaned CSV для offline-экспериментов."""
     if not os.path.exists(path):
         return None
     cond = pd.read_csv(path)
-    # оставляем только app_number + итоговые признаки [0, 1]
-    keep = ["app_number"] + [c for c in CONDITION_FEATURE_COLUMNS if c in cond.columns]
+    requested_columns = columns or CONDITION_FEATURE_COLUMNS
+    keep = ["app_number"] + [c for c in requested_columns if c in cond.columns]
     return cond[keep]
 
 
@@ -429,7 +676,7 @@ def extract_features(row: pd.Series, tables: dict) -> dict:
         np.log1p(akimat_data.get("total_apps", 0))
     )
 
-    return {
+    result = {
         "normative_match": normative_match,
         "normative_original_match": float(normative_original_match),
         "normative_original_log": float(np.log1p(max(original_norm, 0.0))),
@@ -466,6 +713,11 @@ def extract_features(row: pd.Series, tables: dict) -> dict:
         "direction_risk": 0.5,
         "regional_pasture_capacity": 0.5,
     }
+    condition_context = build_condition_context_features(pd.DataFrame([row])).iloc[0].to_dict()
+    for column_name in CONDITION_REFERENCE_COLUMNS + SAFE_CONDITION_FEATURE_COLUMNS:
+        if column_name in condition_context and not pd.isna(condition_context[column_name]):
+            result[column_name] = float(condition_context[column_name])
+    return result
 
 
 def extract_features_single_with_history(
@@ -666,20 +918,31 @@ def extract_features_batch(df: pd.DataFrame, tables: dict) -> pd.DataFrame:
     features["submit_month_sin"] = np.sin(angle)
     features["submit_month_cos"] = np.cos(angle)
 
-    # condition-признаки из cond-файлов (pasture, mortality, criteria и т.д.)
-    cond = load_condition_features()
+    context_features = build_condition_context_features(df)
+    for column_name in CONDITION_REFERENCE_COLUMNS + SAFE_CONDITION_FEATURE_COLUMNS:
+        if column_name in context_features.columns:
+            features[column_name] = pd.to_numeric(
+                context_features[column_name],
+                errors="coerce",
+            ).fillna(0.5 if column_name in SAFE_CONDITION_FEATURE_COLUMNS else np.nan)
+
+    cond = load_condition_features(columns=LEAKY_CONDITION_FEATURE_COLUMNS)
     if cond is not None and "app_number" in df.columns:
-        # нормализуем app_number: убираем ведущие нули для надёжного join
         cond["app_number"] = cond["app_number"].astype(str).str.lstrip("0")
         app_key = df["app_number"].astype(str).str.lstrip("0")
         cond_indexed = cond.set_index("app_number")
-        for col in CONDITION_FEATURE_COLUMNS:
+        for col in LEAKY_CONDITION_FEATURE_COLUMNS:
             if col in cond_indexed.columns:
                 features[col] = app_key.map(cond_indexed[col]).fillna(0.5)
             else:
                 features[col] = 0.5
     else:
-        for col in CONDITION_FEATURE_COLUMNS:
+        for col in LEAKY_CONDITION_FEATURE_COLUMNS:
             features[col] = 0.5
+
+    for col in SAFE_CONDITION_FEATURE_COLUMNS:
+        if col not in features.columns:
+            features[col] = 0.5
+        features[col] = pd.to_numeric(features[col], errors="coerce").fillna(0.5).clip(0, 1)
 
     return features

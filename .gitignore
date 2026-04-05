@@ -12,3 +12,4 @@ models/reports/*
 *.egg-info/
 dist/
 build/
+.codex
